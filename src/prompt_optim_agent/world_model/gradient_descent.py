@@ -7,7 +7,6 @@ import numpy as np
 class GradientDescent():
     def __init__(self, 
                  task, 
-                 prompt_length_limit,
                  
                  pred_model, 
                  optim_model,
@@ -16,11 +15,7 @@ class GradientDescent():
                  max_tokens=2048,
                  print_log = True,
                  logger = None,
-                 num_new_prompts = 1,
-                 
-                 gradient_prompt_tempelate = None,
-                 optimize_prompt_tempelate = None,
-                 error_example_template = None):
+                 num_new_prompts = 1,):
 
         self.task = task
         self.pred_model = pred_model
@@ -31,20 +26,15 @@ class GradientDescent():
         self.logger = logger
         self.print_log = print_log if logger is not None else False
         self.num_new_prompts = num_new_prompts
-        self.prompt_length_limit = prompt_length_limit
         
         self.use_correct_examples = False
         
-        self.optimize_prompt_tempelate = optimize_prompt_tempelate_gamma2 if optimize_prompt_tempelate is None else optimize_prompt_tempelate
-        self.gradient_prompt_tempelate = gradient_prompt_tempelate_gamma0 if gradient_prompt_tempelate is None else gradient_prompt_tempelate
-        self.error_example_template    = error_example_template_gamma1 if error_example_template is None else error_example_template
+        self.optimize_prompt_tempelate = optimize_prompt_tempelate_single if num_new_prompts == 1 else optimize_prompt_tempelate
+        self.gradient_prompt_tempelate = gradient_prompt_tempelate
+        self.error_example_template    = error_example_template
         
         self.self_eval_prompt = self_eval_prompt_template_v6
         self.example_temlate = example_template_v0
-        
-        self.correct_example_template = correct_example_template_beta0
-        self.correct_gradient_prompt_tempelate = correct_gradient_prompt_tempelate_alpha1
-        self.trajectory_sample_template = trajectory_sample_template_gamma0
         
         self._build_forward_prompts_func = task.build_forward_prompts_completion
         if pred_model in COMPLETION_MODELS:
@@ -110,32 +100,6 @@ class GradientDescent():
     def _clean_self_eval_score(self, response):
         return re.findall(r'\d+', response)[-1]
     
-    def self_evaluate(self, prompt_state, evaluate_helper_data):
-        
-        cur_prompt = prompt_state.prompt
-        parent_prompt = evaluate_helper_data['gradient_descent_output']['cur_prompt']
-        batch_examples_str = self._get_batch_examples_str(evaluate_helper_data['action'])
-        error_example_str = self._get_error_examples(evaluate_helper_data['gradient_descent_output'])
-        correct_example_str = self._get_correct_examples(evaluate_helper_data['gradient_descent_output'])
-        self_eval_prompt = self.self_eval_prompt.format(
-            parent_prompt = parent_prompt,
-            cur_prompt = cur_prompt,
-            examples_str=batch_examples_str,
-            correct_str = correct_example_str,
-            error_str = error_example_str
-            )
-        
-        response = self._optim_model_completion(self_eval_prompt)
-        score = float(self._clean_self_eval_score(response))
-        if self.print_log:
-            log_str = self_evaluate_log_tempelate.format(self_eval_prompt=self_eval_prompt,
-                                                        response=response,
-                                                        self_eval_score=f'{score}')
-            self.logger.info(log_str)
-        self_eval_output = dict(self_eval_prompt=self_eval_prompt,
-                                response=response,
-                                score=score)
-        return score, self_eval_output
     
     def _get_error_examples(self, forward_output): 
         error_examples = []
@@ -155,25 +119,6 @@ class GradientDescent():
                 raise ValueError(f'_get_error_examples: invalid correct number {i} {forward_output}.')
         error_string = ''.join(error_examples)
         return error_string
-    
-    def _get_correct_examples(self, forward_output): 
-        correct_examples = []
-        count = 0
-        for i, example in enumerate(forward_output['examples']):
-            if forward_output['correct'][i]==1:
-                count += 1
-                correct_examples.append(self.correct_example_template.format(
-                    index=count, 
-                    question=example['model_input'],
-                    label=example['label'], 
-                    response=example['model_response'],
-                    prediction=example['pred']))
-            elif forward_output['correct'][i]==0:
-                continue
-            else:
-                raise ValueError(f'_get_correct_examples: invalid correct number {i} {forward_output}.')
-        correct_string = ''.join(correct_examples)
-        return correct_string
 
     def _optim_model_completion(self, model_input):
         messages = [{"role": "user", "content": model_input},]
@@ -188,31 +133,15 @@ class GradientDescent():
         for i, prompt in enumerate(prompts):
             prompt_path_str += prompt_path_str_tempelate.format(index=i,prompt=prompt)
         return prompt_path_str
-    
-    def sample_next_prompt_from_trajectory(self, prompts):
-        trajectory_str = self._build_prompt_trajectory_str(prompts=prompts)
-        optim_model_input = self.trajectory_sample_template.format(trajectory_str=trajectory_str)
-        response = self._optim_model_completion(optim_model_input)
-        optimized_prompt = self._clean_optim_response(response)
-        return optimized_prompt[0]
         
-    def cal_gradient(self, cur_prompt, error_string, correct_string=None):
+    def cal_gradient(self, cur_prompt, error_string):
         correct_gradient = None
-        if self.use_correct_examples:
-            correct_gradient_prompt = self.correct_gradient_prompt_tempelate.format(cur_prompt=cur_prompt, 
-                                                                    correct_string=correct_string)
-            correct_gradient = self._optim_model_completion(correct_gradient_prompt)
         
         gradient_prompt = self.gradient_prompt_tempelate.format(cur_prompt=cur_prompt, 
                                                                 error_string=error_string)
         gradient = self._optim_model_completion(gradient_prompt)
         
         if self.print_log:
-            if self.use_correct_examples:
-                log_str = correct_gradient_log_tempelate.format(gradient_prompt=correct_gradient_prompt,
-                                                        gradient=correct_gradient)
-
-                self.logger.info(log_str)
             
             log_str = gradient_log_tempelate.format(gradient_prompt=gradient_prompt,
                                                     gradient=gradient)
@@ -228,14 +157,12 @@ class GradientDescent():
             matches[i] = m.strip()
         return matches
 
-    def optimize(self, cur_prompt, error_str, gradient, trajectory_prompts, correct_string, correct_gradient, steps_per_gradient):
+    def optimize(self, cur_prompt, error_str, gradient, trajectory_prompts, correct_gradient, steps_per_gradient):
         optimize_prompt = self.optimize_prompt_tempelate.format(cur_prompt=cur_prompt, 
-                                                                correct_string=correct_string,
                                                                 correct_gradient=correct_gradient,
                                                                 error_str=error_str, 
                                                                 gradient=gradient, 
                                                                 trajectory_prompts=trajectory_prompts,
-                                                                prompt_length_limit=self.prompt_length_limit,
                                                                 steps_per_gradient=steps_per_gradient)
         response = self._optim_model_completion(optimize_prompt)
         optimized_prompt = self._clean_optim_response(response)
@@ -255,14 +182,10 @@ class GradientDescent():
         if gradient_descent_output['acc']==-1:
             return gradient_descent_output
         
-        if self.use_correct_examples:
-            correct_string = self._get_correct_examples(gradient_descent_output)
-        else:
-            correct_string = None
             
         error_string = self._get_error_examples(gradient_descent_output)
         
-        gradient, correct_gradient = self.cal_gradient(cur_prompt=cur_prompt, error_string=error_string, correct_string=correct_string)
+        gradient, correct_gradient = self.cal_gradient(cur_prompt=cur_prompt, error_string=error_string)
         
         trajectory_prompts = helper_data['trajectory_prompts']
         trajectory_prompts = self._build_prompt_trajectory_str(trajectory_prompts)
@@ -271,7 +194,6 @@ class GradientDescent():
                                           error_str=error_string, 
                                           gradient=gradient, 
                                           trajectory_prompts=trajectory_prompts,
-                                          correct_string=correct_string, 
                                           correct_gradient=correct_gradient, 
                                           steps_per_gradient=self.num_new_prompts)
         

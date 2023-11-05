@@ -34,9 +34,6 @@ def config():
     # MCTS
     parser.add_argument('--min_depth', type=int, default=3, help="Early stop depth: early stop is only applied when depth is larger than min_depth.")
     parser.add_argument('--w_exp', type=float, default=2.5, help="Weight of MCTS.")
-    parser.add_argument('--init_threshold_increase', type=float, default=0)
-    parser.add_argument('--threshold_increase', type=float, default=0)
-    parser.add_argument('--min_threshold', type=float, default=0.0)
     
     # BeamSearch
     parser.add_argument('--beam_width', type=int, default=3)

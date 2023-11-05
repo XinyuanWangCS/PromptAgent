@@ -4,7 +4,6 @@ from .utils import *
 from tasks import *
 from .world_model import get_world_model
 from .search_algo import get_search_algo
-from .search_algo.base_algo import EvaluateMetrics
 from datetime import datetime, timedelta
 import pytz
 
@@ -25,22 +24,16 @@ class BaseAgent():
                  post_instruction,
                  log_dir: str,
                  data_dir: str,
-                 test_all_nodes: bool,
                  
                  expand_width: int,
                  num_new_prompts: int,
-                 
-                 prompt_length_limit: int,
+
                  min_depth:int,
                  depth_limit: int,
                  
                  iteration_num: int, 
-                 threshold_increase: float,
-                 init_threshold_increase:float,
-                 min_threshold:float,
                  w_exp:float, 
                  
-                 eval_methods = None, 
                  # Beam Search
                  beam_width:int = None,
                  **kwargs) -> None:
@@ -50,10 +43,6 @@ class BaseAgent():
         self.eval_size = eval_size
         self.test_size = test_size
         self.post_instruction = post_instruction
-        if eval_methods is None:
-            self.eval_methods = [EvaluateMetrics.EVAL_DATA_ACC,]
-        else:
-            self.eval_methods = eval_methods
         self.seed = seed
 
         self.log_dir = log_dir
@@ -82,26 +71,22 @@ class BaseAgent():
         self.world_model = get_world_model(search_algo)(
             task=self.task, 
             logger=self.logger, 
-            # Model
+            # model
             pred_model=pred_model,
             pred_temperature= pred_temperature,
             optim_model=optim_model, 
             optim_temperature=optim_temperature,
-            # Optim hyperparameter
+            # number of new prompts sampled in each optimization step
             num_new_prompts = num_new_prompts,
-            prompt_length_limit=prompt_length_limit,
-            
+            # Dataset
             train_shuffle = train_shuffle,
             train_batch_size = batch_size,
-            #MCTS
-            eval_methods=self.eval_methods,
             )
         
         self.search_algo = get_search_algo(search_algo)(
             task=self.task, 
             world_model=self.world_model, 
             # Data and log
-            test_all_nodes=test_all_nodes,
             logger=self.logger,
             log_dir = self.log_dir,
             # Search
@@ -109,10 +94,7 @@ class BaseAgent():
             depth_limit=depth_limit,
             expand_width=expand_width,
             # MCTS
-            n_iters = iteration_num,
-            threshold_increase = threshold_increase,
-            init_threshold_increase = init_threshold_increase,
-            min_threshold=min_threshold,
+            iteration_num = iteration_num,
             w_exp=w_exp,
             #BeamSearch
             beam_width=beam_width,

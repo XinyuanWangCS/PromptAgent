@@ -1,24 +1,19 @@
 from .gradient_descent import *
-from typing import NamedTuple
-from ..test_helper import eval_instruction_with_loader
 from typing import Generic
-from ..search_algo.base_algo import State, Action, Trace, PromptState, EvaluateMetrics
+from ..search_algo.base_algo import State, Action
 from ..search_algo.mcts import MCTSNode
-from ..utils import gpt_chat_completion
-
+from tqdm import tqdm
 class WorldModel(Generic[State, Action]):
     def __init__(self,
                  task,
                  logger,
                  
-                 prompt_length_limit,
                  # model
                  pred_model: str,
                  optim_model: str,
                  pred_temperature: float, 
                  optim_temperature: float,
                  
-                 eval_methods,
                  max_tokens=2048,
                  num_new_prompts = 2,
                  
@@ -34,7 +29,6 @@ class WorldModel(Generic[State, Action]):
         self.pred_temperature=pred_temperature
         self.optim_model = optim_model
         self.optim_temperature = optim_temperature
-        self.eval_methods = eval_methods
         self.max_tokens=max_tokens
         self.num_new_prompts = num_new_prompts
         
@@ -62,7 +56,7 @@ class WorldModel(Generic[State, Action]):
                                                 forward_temperature=pred_temperature, 
                                                 optim_temperature = optim_temperature,
                                                 max_tokens=max_tokens,
-                                                prompt_length_limit=prompt_length_limit)
+                                                )
         self.log_vars()
         
     def log_vars(self):
@@ -86,7 +80,7 @@ class WorldModel(Generic[State, Action]):
         trajectory_prompts = []
         temp_node = node
         while True:
-            trajectory_prompts.append(temp_node.state.prompt)
+            trajectory_prompts.append(temp_node.prompt)
             if temp_node.parent is not None:
                 temp_node = temp_node.parent
             else:
@@ -95,28 +89,17 @@ class WorldModel(Generic[State, Action]):
                 
     
     def _gradient_descent_step(self, node: MCTSNode, batch):
-        '''
-            state: PromptState
-            batch: batch data
-        '''
         trajectory_prompts = self._get_trajectory_prompts(node=node)
         helper_data = dict(trajectory_prompts=trajectory_prompts)
         
-        gradient_descent_output = self.gradient_descent(batch, node.state.prompt, helper_data) 
+        gradient_descent_output = self.gradient_descent(batch, node.prompt, helper_data) 
         if gradient_descent_output['acc']==-1:
             return [], gradient_descent_output
         
-        node.state.update_state_record_with_examples(
-            correct=gradient_descent_output['correct'], 
-            choice=EvaluateMetrics.CUR_BATCH_ACC
-            )
-        
         new_nodes = []
         for prompt in gradient_descent_output['optimized_prompts']:
-            new_prompt_state = PromptState(prompt=prompt, eval_methods=self.eval_methods)
-            
             child_node = MCTSNode(
-                state=new_prompt_state, 
+                prompt=prompt, 
                 action=gradient_descent_output['gradient'], 
                 parent=node)
             new_nodes.append(child_node)
@@ -128,73 +111,17 @@ class WorldModel(Generic[State, Action]):
         return new_nodes, gradient_descent_output
     
     def build_root(self, init_prompt):
-        init_state = PromptState(prompt=init_prompt, eval_methods=self.eval_methods)
-        for method in init_state.eval_methods:
-            init_state.state_record[method] = 0.0
-        node = MCTSNode(state=init_state, action=None, parent=None)
-        root_threshold = self.evaluate_node_on_eval_set(node=node)
-        node.threshold = root_threshold
+        node = MCTSNode(prompt=init_prompt, action=None, parent=None)
+        node.reward = self._reward_type_helper(self.evaluate_prompt(prompt=node.prompt)["metric"])
         return node
-    
-    
-    
-    def evaluate_child_node(self, node:MCTSNode):
-        '''if EvaluateMetrics.PARENT_BATCH_ACC in self.eval_methods:
-            node.prompt_state.update_state_record_item(EvaluateMetrics.PARENT_BATCH_ACC, 
-                                                  evaluate_helper_data['gradient_descent_output']['acc'])
-          '''  
-        if EvaluateMetrics.PARENT_EVAL_DATA_ACC in self.eval_methods:
-            node.state.update_state_record_item(
-                EvaluateMetrics.PARENT_EVAL_DATA_ACC, 
-                node.parent.state[EvaluateMetrics.EVAL_DATA_ACC])
-            
-        '''if EvaluateMetrics.CUR_BATCH_ACC in self.eval_methods:
-            batch = evaluate_helper_data['batch']
-            forward_output = self.gradient_descent.forward(batch=batch, cur_prompt=prompt_state.prompt) 
-            node.prompt_state.update_state_record_with_examples(
-                correct=forward_output['correct'], 
-                 choice=EvaluateMetrics.CUR_BATCH_ACC
-                 )'''
-        
-        if EvaluateMetrics.EVAL_DATA_ACC in self.eval_methods:
-            evaludate_output = self.evaluate_prompt(prompt=node.state.prompt)
-            node.state.update_state_record_with_examples(
-                correct=evaludate_output['correct'], 
-                choice=EvaluateMetrics.EVAL_DATA_ACC
-                )
-            node.threshold = node.state.get_threshold()
 
-        '''if EvaluateMetrics.SELF_EVAL_SCORE in self.eval_methods:
-            self.self_evaluate(prompt_state=node.state, evaluate_helper_data=evaluate_helper_data)'''
-    
-    def sample_single_state_trajectory(self, prompts, depth):
-        new_prompt_states = []
-        for _ in range(depth):
-            new_prompt = self.gradient_descent.sample_next_prompt_from_trajectory(prompts=prompts)
-            prompts.append(new_prompt)
-            new_prompt_state = PromptState(prompt=new_prompt, eval_methods=self.eval_methods)
-            new_prompt_states.append(new_prompt_state)
-        return new_prompt_states
+    def evaluate_child_node(self, node:MCTSNode):
+        evaludate_output = self.evaluate_prompt(prompt=node.prompt)
+        node.reward = self._reward_type_helper(evaludate_output["metric"])
         
-    def evaluate_node_on_eval_set(self, node:MCTSNode):
-        
-        evaludate_output = self.evaluate_prompt(prompt=node.state.prompt)
-        node.state.update_state_record_with_examples(
-            correct=evaludate_output['correct'], 
-            choice=EvaluateMetrics.EVAL_DATA_ACC
-            )
-        self.logger.info(f'Evaluate node: {node.id}\tEval acc: {node.state.state_record[EvaluateMetrics.EVAL_DATA_ACC]}')
-        return node.state.state_record[EvaluateMetrics.EVAL_DATA_ACC]
-        
-    def self_evaluate(self, prompt_state:PromptState, evaluate_helper_data, norm=5.0):
-        self_eval_score, _ = self.gradient_descent.self_evaluate(prompt_state=prompt_state,
-                                                       evaluate_helper_data=evaluate_helper_data)
-        self_eval_score /= norm
-        prompt_state.update_state_record_item(item_name='self_eval_score', item_value=self_eval_score)
-        return self_eval_score
     
     def test_prompt(self, prompt):
-        metric, eval_output = eval_instruction_with_loader(task=self.task, 
+        metric, eval_output = self.eval_instruction_with_loader(task=self.task, 
                                            eval_prompt=prompt,
                                            dataloader=self.test_dataloader,
                                            model=self.pred_model,
@@ -202,15 +129,22 @@ class WorldModel(Generic[State, Action]):
                                            max_tokens=self.max_tokens)
         return metric, eval_output
     
-    
+    def _reward_type_helper(self, metric):
+        if isinstance(metric, tuple):
+            return metric[0]
+        else:
+            return metric
+        
     def evaluate_prompt(self, prompt):
         self.logger.info(f'prompt: {prompt}')
-        metric, eval_output = eval_instruction_with_loader(task=self.task, 
-                                           eval_prompt=prompt,
-                                           dataloader=self.eval_dataloader,
-                                           model=self.pred_model,
-                                           temperature=self.pred_temperature,
-                                           max_tokens=self.max_tokens)
+        metric, eval_output = self.eval_instruction_with_loader(
+            task=self.task, 
+            eval_prompt=prompt,
+            dataloader=self.eval_dataloader,
+            model=self.pred_model,
+            temperature=self.pred_temperature,
+            max_tokens=self.max_tokens
+            )
         correct = eval_output['correct']
         evaludate_output = dict(
             metric=metric,
@@ -220,16 +154,48 @@ class WorldModel(Generic[State, Action]):
         
         return evaludate_output
     
-    def is_terminal(self, state: PromptState): #TODO
-        if state.get_score() < 0:
-            return True
-        return False
-    
-    def _optim_model_completion(self, prompt):
-        messages = [{"role": "user", "content": prompt},]
-        response = gpt_chat_completion(messages=messages, model=self.optim_model, temperature=self.optim_temperature)['choices'][0]['message']['content'].strip()
-        return response
-    
-    @staticmethod
-    def init_state(init_prompt) -> PromptState:
-        return PromptState(prompt=init_prompt)
+    def eval_instruction_with_loader(self, task, eval_prompt, dataloader, model='gpt-3.5-turbo', temperature=0, max_tokens=1024, record_outputs=True):
+
+        build_forward_prompts_func = task.build_forward_prompts_completion
+        if model in COMPLETION_MODELS:
+            batch_forward_func = batch_forward_completion
+        elif model in CHAT_COMPLETION_MODELS:
+            batch_forward_func = batch_forward_chatcompletion
+        elif model in OPENSOURCE_MODELS:
+            batch_forward_func  = batch_forward_flant5
+        else:
+            raise ValueError(f"Model {model} not supported.")
+        
+        all_questions = []
+        all_labels = []
+        all_preds = []
+        all_prompts = []
+        all_responses = []
+        eval_output = {}
+        
+        pbar = tqdm(dataloader, leave=False)
+        for batch in pbar:
+            batch_prompts = build_forward_prompts_func(batch['question'], eval_prompt)
+            responses = batch_forward_func(batch_prompts, model=model, temperature=temperature, max_tokens=max_tokens)
+            preds = task.batch_clean_responses(responses)
+            labels = task.clean_labels(batch['answer'])
+            all_preds.extend(preds)
+            all_labels.extend(labels)
+            all_questions.extend(batch['question'])
+            if record_outputs:
+                all_prompts.extend(batch_prompts)
+                all_responses.extend(responses)
+            metric = task.cal_metric(all_preds, all_labels, all_questions)
+            if not isinstance(metric, tuple):
+                pbar.set_postfix_str(f"Test Metric: {metric:.4f}")
+            else:
+                pbar.set_postfix_str(f"Test Metrics: {metric}")
+        
+        if record_outputs:
+            eval_output['model_inputs'] =  all_prompts
+            eval_output['model_responses'] =  all_responses
+            eval_output['preds'] =  all_preds
+            eval_output['labels'] =  all_labels
+        eval_output['correct'] =  task.cal_correct(all_preds, all_labels)    
+        metric = task.cal_metric(all_preds, all_labels, all_questions)
+        return metric, eval_output

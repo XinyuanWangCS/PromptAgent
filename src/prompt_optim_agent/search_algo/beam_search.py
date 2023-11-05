@@ -1,10 +1,8 @@
-from tqdm import trange
 from test import *
 from prompt_optim_agent.utils import *
 import itertools
 from typing import Generic, Optional, List
 from .base_algo import SearchAlgo, State, Action
-from .action_agent import DataAgent
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import numpy as np 
