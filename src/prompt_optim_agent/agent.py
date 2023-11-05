@@ -43,9 +43,6 @@ class BaseAgent():
                  eval_methods = None, 
                  # Beam Search
                  beam_width:int = None,
-                 # APE
-                 eval_set_size:int = None,
-                 filtered_prompt_num: int = None,
                  **kwargs) -> None:
         
         self.task_name = task_name
@@ -98,8 +95,6 @@ class BaseAgent():
             train_batch_size = batch_size,
             #MCTS
             eval_methods=self.eval_methods,
-            # APE
-            eval_set_size = eval_set_size
             )
         
         self.search_algo = get_search_algo(search_algo)(
@@ -121,12 +116,8 @@ class BaseAgent():
             w_exp=w_exp,
             #BeamSearch
             beam_width=beam_width,
-            # APE
-            filtered_prompt_num = filtered_prompt_num,
-            eval_set_size = eval_set_size
             )
-        
-        #
+
         
     def run(self, init_state, iteration_num):
         self.logger.info(f'init_prompt: {init_state}')

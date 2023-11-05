@@ -26,14 +26,7 @@ CHAT_COMPLETION_MODELS = ['gpt-3.5-turbo', 'gpt-3.5-turbo-0301', 'gpt-4', 'gpt-4
 COMPLETION_MODELS =  ['text-davinci-003', 'text-davinci-002','code-davinci-002']
 OPENSOURCE_MODELS = ['flan-t5']
 PALM_MODELS = ['models/chat-bison-001']
-class Color:
-    RED = '\033[91m'
-    GREEN = '\033[92m'
-    YELLOW = '\033[93m'
-    BLUE = '\033[94m'
-    MAGENTA = '\033[95m'
-    CYAN = '\033[96m'
-    RESET = '\033[0m'
+
 
 def create_logger(logging_dir, name, log_mode='train'):
     """
