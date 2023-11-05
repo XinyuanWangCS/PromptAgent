@@ -1,4 +1,3 @@
-import os
 import argparse
 from prompt_optim_agent import *
 
