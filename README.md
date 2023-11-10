@@ -1,12 +1,12 @@
-# Prompt-Optim-with-RAP
+# PromptAgent
 This project aims to automatically optimize prompt using RAP
 
 ## Installation
 ```bash
-git clone https://github.com/XinyuanWangCS/Prompt-Optim-with-RAP.git
-cd Prompt-Optim-with-RAP
-conda create -n prompt_searcher
-conda activate prompt_searcher
+git clone https://github.com/XinyuanWangCS/PromptAgent.git
+cd PromptAgent
+conda create -n prompt_agent
+conda activate prompt_agent
 pip install -r requirement.txt
 ```
 
