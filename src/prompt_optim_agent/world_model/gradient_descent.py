@@ -33,7 +33,6 @@ class GradientDescent():
         self.gradient_prompt_tempelate = gradient_prompt_tempelate
         self.error_example_template    = error_example_template
         
-        self.self_eval_prompt = self_eval_prompt_template_v6
         self.example_temlate = example_template_v0
         
         self._build_forward_prompts_func = task.build_forward_prompts_completion

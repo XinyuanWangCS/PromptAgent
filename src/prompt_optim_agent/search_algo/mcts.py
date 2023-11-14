@@ -71,10 +71,10 @@ class MCTSNode(Generic[State, Action]):
             'parent':-1 if self.parent is None else self.parent.id,
             'visited':self.visited,
             'expand_times':self.expand_times,
-            'reward': self.reward,
             'q':self.Q,
             'uct':self.uct,
             'prompt': self.prompt,
+            'reward': self.reward,
             'test_metric':self.test_metric
         }
         
