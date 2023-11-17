@@ -2,6 +2,8 @@
 
 PromptAgent is a prompt optimization method that autonomously crafts prompts equivalent in quality to those handcrafted by experts, i.e., expert-level prompts. ([arXiv](https://arxiv.org/abs/2310.16427))
 
+Unlike discovering magic/local prompt variants as existing prompt optimization methods, expert-level prompting is still an untapped area that solves challenging problems. And PromptAgent serves as a principled framework to study prompt optimization by unifying prompt sampling and rewarding. 
+
 <p align="center">
 <img src="./images/github_expert_prompt.png" alt="Expert-level Prompting" width="500" title="Expert-level Prompting"/>
 </p>
