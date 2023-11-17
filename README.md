@@ -21,9 +21,9 @@ pip install -r requirements.txt
 
 ## Quick Start
 
-The following command run PromptAgent to craft an expert prompt for a BIG-bench task, [penguins_in_a_table](https://github.com/google/BIG-bench/tree/main/bigbench/benchmark_tasks/penguins_in_a_table):
+The following command run PromptAgent to craft an expert prompt for a BIG-bench task, [penguins_in_a_table](https://github.com/google/BIG-bench/tree/main/bigbench/benchmark_tasks/penguins_in_a_table). The running could take some time depending on the inference speed of OpenAI APIs and size of datasets.
 ```bash
-python src/main.py --task_name bigbench  --search_algo mcts --pred_model gpt-3.5-turbo --log_dir logs/ --post_instruction False --init_prompt "Answer questions about a table of penguins and their attributes." --train_shuffle True --batch_size 5 --expand_width 3 --train_size 70 --eval_size 70 --test_size 79 --iteration_num 12 --depth_limit 8 --data_dir datasets/penguins_in_a_table.json --api_key 
+python src/main.py --task_name bigbench  --search_algo mcts --pred_model gpt-3.5-turbo --log_dir logs/ --post_instruction False --init_prompt "Answer questions about a table of penguins and their attributes." --train_shuffle True --batch_size 5 --expand_width 3 --train_size 70 --eval_size 70 --test_size 79 --iteration_num 12 --depth_limit 8 --data_dir datasets/penguins_in_a_table.json --api_key "your_api_key"
 ```
 
 `penguins_in_a_table` is an table understanding task to answer questions about animals contained in tables. An example from the original dataset looks like this:
