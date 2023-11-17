@@ -1,3 +1,7 @@
+<p align="center">
+<img src="./images/Header.png" alt="Expert-level Prompting" title="Expert-level Prompting"/>
+</p>
+
 # PromptAgent
 
 PromptAgent is a prompt optimization method that autonomously crafts prompts equivalent in quality to those handcrafted by experts, i.e., expert-level prompts. ([arXiv](https://arxiv.org/abs/2310.16427))
