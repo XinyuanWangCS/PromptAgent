@@ -5,14 +5,18 @@
 # PromptAgent
 
 PromptAgent is a prompt optimization method that autonomously crafts prompts equivalent in quality to those handcrafted by experts, i.e., expert-level prompts. ([arXiv](https://arxiv.org/abs/2310.16427))
-
-Unlike discovering magic/local prompt variants as existing prompt optimization methods, expert-level prompting is still an untapped area that solves challenging problems. And PromptAgent serves as a principled framework to study prompt optimization by unifying prompt sampling and rewarding. 
-
 <p align="center">
-<img src="./images/github_expert_prompt.png" alt="Expert-level Prompting" width="500" title="Expert-level Prompting"/>
+<img src="./images/expert_prompt_00.jpg" alt="Expert-level Prompting" width="700" title="Expert-level Prompting"/>
+</p>
+Unlike discovering magic/local prompt variants as existing prompt optimization methods, expert-level prompting is still an untapped area that solves challenging problems. And PromptAgent serves as a principled framework to study prompt optimization by unifying prompt sampling and rewarding using MCTS algorithm. 
+<p align="center">
+<img src="./images/mcts_00.jpg" alt="Expert-level Prompting" width="700" title="Expert-level Prompting"/>
 </p>
 
 
+
+## News
+- Dec. 17, 2023: Refined the code for ease of reading and use by users.
 
 ## Installation
 
@@ -90,7 +94,9 @@ Our current tasks includes selection question tasks and NER tasks. Adding new se
 
 After that, you can run PromptAgent on your customized dataset!
 
-`TODO: We will extend the features to enable flexible training/testing pipeline with new tasks`
+## TODO
+- We will extend the features to enable flexible training/testing pipeline with new tasks.  
+- Support open-source models or huggingface models.
 
 
 ## Citations
