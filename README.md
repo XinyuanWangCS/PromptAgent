@@ -68,7 +68,7 @@ that you correctly interpret these in context of the question.
 ...
 ```
 
-After finishing the optimization, all the intermediate nodes and paths will be stored in a json file. We will keep the top-k reward nodes, the last node in the highest average reward path, and the highest reward node in the highest averaget reward path. In the paper, we use the last one as the selection strategy. 
+It takes around two hours to run the above experiment, which costs around $5 using OpenAI API (around $4 for GPT-4 and $1 for GPT-3.5). After finishing the optimization, all the intermediate nodes and paths will be stored in a json file. We will keep the top-k reward nodes, the last node in the highest average reward path, and the highest reward node in the highest average reward path. In the paper, we use the highest reward node in the highest average reward path as the selection strategy. 
 
 ### Test
 We can run `test.py` to test any prompt performance with the following commands:  
