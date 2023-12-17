@@ -1,12 +1,8 @@
-from test import *
-from prompt_optim_agent.utils import *
 import itertools
 from typing import Generic, Optional, List
 from .base_algo import SearchAlgo, State, Action
-import matplotlib.pyplot as plt
-from matplotlib.ticker import MaxNLocator
-import numpy as np 
 import json
+import os
 
 class BeamNode(Generic[State, Action]):
     id_iter = itertools.count()
@@ -23,7 +19,7 @@ class BeamNode(Generic[State, Action]):
 
         self.id = next(BeamNode.id_iter)
         self.prompt = prompt
-        self.test_metric = 0.
+        self.test_metric = -1.0
         self.eval_metric = 0. 
         self.action = action
         self.parent = parent
@@ -145,7 +141,6 @@ class BeamSearch(SearchAlgo):
             self.nodes = nodes
         
         output = self.prepare_output()
-        self.draw([output['best_path']])
         self.output_to_json(output=output)
         
         return self.nodes, output
@@ -174,44 +169,6 @@ class BeamSearch(SearchAlgo):
         for node in nodes:
             self.test_and_log_node(node=node, eval=eval)
     
-    def draw(self, paths: List[List[BeamNode]]):
-        offset = np.linspace(-0.1, 0.1, len(paths))
-        
-        fig, ax = plt.subplots()
-        colors = plt.cm.jet(np.linspace(0, 1, len(paths)))
-        ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-        for idx, path in enumerate(paths):
-            depths = np.array([node.depth for node in path]) + offset[idx]
-            
-            metrics = [node.test_metric[0] if isinstance(node.test_metric, tuple) else node.test_metric for node in path]
-            ids = [node.id for node in path]
-
-            ax.plot(depths, metrics, color=colors[idx], marker='o')  
-            for d, r, id_ in zip(depths, metrics, ids):
-                ax.annotate(str(id_), (d, r))
-
-        ax.set_title("Test Metric")
-        ax.set_xlabel("Depth")
-        ax.set_ylabel("Test")
-        plt.savefig(os.path.join(self.log_dir, 'test_metric.png'), bbox_inches='tight')
-        
-        fig, ax = plt.subplots()
-        colors = plt.cm.jet(np.linspace(0, 1, len(paths)))
-        ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-        for idx, path in enumerate(paths):
-            depths = np.array([node.depth for node in path]) + offset[idx]
-            eval_metrics = [self._sort_helper(node.eval_metric) for node in path]
-            ids = [node.id for node in path]
-
-            ax.plot(depths, eval_metrics, color=colors[idx], marker='o')  
-            for d, r, id_ in zip(depths, eval_metrics, ids):
-                ax.annotate(str(id_), (d, r))
-
-        ax.set_title("Eval Metric")
-        ax.set_xlabel("Depth")
-        ax.set_ylabel("Metric")
-        plt.savefig(os.path.join(self.log_dir, 'eval_metric.png'), bbox_inches='tight')
-    
     def prepare_output(self):
         # test and log nodes
         self.logger.info(f'\n---------------------  test nodes ------------------------')
@@ -232,14 +189,15 @@ class BeamSearch(SearchAlgo):
         best_path = sorted(paths_nodes, key=lambda path: self._sort_helper(path[-1].eval_metric), reverse=True)[0]
         best_node = sorted(self.all_nodes, key=lambda node: self._sort_helper(node.eval_metric), reverse=True)[0]
         
-        self.logger.info(f'---------------------  best path ------------------------')
-        self.test_and_log_nodes(best_path, eval=True)
+        if len(self.world_model.test_dataloader) != 0:
+            self.logger.info(f'---------------------  best path ------------------------')
+            self.test_and_log_nodes(best_path, eval=True)
+                
+            self.logger.info(f'---------------------  best path node------------------------')
+            self.test_and_log_node(best_path[-1], eval=False)
             
-        self.logger.info(f'---------------------  best path node------------------------')
-        self.test_and_log_node(best_path[-1], eval=False)
-        
-        self.logger.info(f'---------------------  best global node------------------------')
-        self.test_and_log_node(best_node, eval=True) 
+            self.logger.info(f'---------------------  best global node------------------------')
+            self.test_and_log_node(best_node, eval=True) 
         
         
         return dict(

@@ -26,6 +26,7 @@ class CustomTask(BaseTask):
 
         self.answer_format_prompt = ''
         self.option_dict = {'not similar':'A', 'somewhat similar':'B', 'similar':'C'}
+        
     def discretize(self, score):
         if score < 5/3:
             return "A"

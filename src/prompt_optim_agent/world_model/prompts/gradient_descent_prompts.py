@@ -1,3 +1,6 @@
+# These prompts are modified based on Automatic Prompt Optimization with "Gradient Descent" and Beam Search
+# https://arxiv.org/abs/2305.03495
+
 gradient_prompt_tempelate = """
 I'm writing prompts for a language model designed for a task.
 

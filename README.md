@@ -27,9 +27,9 @@ pip install -r requirements.txt
 
 ## Quick Start
 
-The following command run PromptAgent to craft an expert prompt for a BIG-bench task, [penguins_in_a_table](https://github.com/google/BIG-bench/tree/main/bigbench/benchmark_tasks/penguins_in_a_table). The running could take some time depending on the inference speed of OpenAI APIs and size of datasets.
+The following command run PromptAgent to craft an expert prompt for a BIG-bench task, [penguins_in_a_table](https://github.com/google/BIG-bench/tree/main/bigbench/benchmark_tasks/penguins_in_a_table). The running could take some time depending on the inference speed of OpenAI APIs and size of datasets. 
 ```bash
-python src/main.py --task_name bigbench  --search_algo mcts --pred_model gpt-3.5-turbo --log_dir logs/ --post_instruction False --init_prompt "Answer questions about a table of penguins and their attributes." --train_shuffle True --batch_size 5 --expand_width 3 --train_size 70 --eval_size 70 --test_size 79 --iteration_num 12 --depth_limit 8 --data_dir datasets/penguins_in_a_table.json --api_key "your_api_key"
+python src/main.py --task_name bigbench --search_algo mcts --batch_size 5 --depth_limit 5 --train_size 70 --eval_size 50 --test_size 0 --seed 42 --train_shuffle True --iteration_num 10 --expand_width 3 --post_instruction False --pred_model gpt-3.5-turbo --optim_model gpt-4 --log_dir logs/ --data_dir datasets/penguins_in_a_table.json --init_prompt "Answer questions about a table of penguins and their attributes." --api_key "your_api_key"
 ```
 
 `penguins_in_a_table` is an table understanding task to answer questions about animals contained in tables. An example from the original dataset looks like this:
@@ -68,12 +68,27 @@ that you correctly interpret these in context of the question.
 ...
 ```
 
-After finishing the optimization, we can run `test.py` to test any prompt performance with the following command:
+After finishing the optimization, all the intermediate nodes and paths will be stored in a json file. We will keep the top-k reward nodes, the last node in the highest average reward path, and the highest reward node in the highest averaget reward path. In the paper, we use the last one as the selection strategy. 
+
+### Test
+We can run `test.py` to test any prompt performance with the following commands:  
+Enter the prompt in the command line:
 ```bash
-python src/test.py --task_name bigbench --exp_name "20230913_1609-bigbench_geometric_shapes-algo_mcts-batch_2-train_150-eval_5-test_5" --eval_prompt "your prompt" --api_key "your_api" --data_dir "bigbench json path"
+python src/test.py --task_name bigbench --eval_prompt "Answer questions about a table of penguins and their attributes." --prompt_file "prompt file path" --train_size 70 --eval_size 50 --test_size 79 --seed 42 --pred_model 'gpt-3.5-turbo' --data_dir "datasets/penguins_in_a_table.json" --api_key "your_api"
+```
+or   
+Put prompt in a .txt file if the prompt is very long:
+```bash
+python src/test.py --task_name bigbench --prompt_file "prompt file path" --train_size 70 --eval_size 50 --test_size 79 --seed 42 --pred_model 'gpt-3.5-turbo' --data_dir "datasets/penguins_in_a_table.json" --api_key "your_api"
 ```
 
 ## How to add a new task?
+Our current tasks includes selection question tasks and NER tasks. Adding new selection tasks is relatively easy. Please refer to the .py files in the tasks folder. First, create a new task.py file and a new CustomTask class. Then, there are several task-specific functions to be implemented in your customized task.py file: 
+1. Load your dataset: We recommend spliting your dataset into "train" and "test" and storing them into json file.
+2. Input formating: For selection questions, it is necessary to combine question and options before inputing into the pred_model.
+3. Answer extraction: Extract the final answer from the model's response.   
+
+After that, you can run PromptAgent on your customized dataset!
 
 `TODO: We will extend the features to enable flexible training/testing pipeline with new tasks`
 

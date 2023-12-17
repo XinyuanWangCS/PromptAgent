@@ -19,7 +19,6 @@ class BeamSearchWorldModel(Generic[State, Action]):
         optim_temperature: float,
         
         prompt_length_limit:int,
-        max_tokens=2048,
         num_new_prompts = 3,
         train_shuffle = True,
         train_batch_size: int = 5,
@@ -34,7 +33,6 @@ class BeamSearchWorldModel(Generic[State, Action]):
         self.optim_model = optim_model
         self.pred_temperature=pred_temperature
         self.optim_temperature = optim_temperature
-        self.max_tokens=max_tokens
 
         self.train_dataloader = self.task.get_dataloader('train', 
                                                         batch_size=train_batch_size, 
@@ -54,7 +52,6 @@ class BeamSearchWorldModel(Generic[State, Action]):
                                                 num_new_prompts = num_new_prompts,
                                                 forward_temperature=pred_temperature, 
                                                 optim_temperature = optim_temperature,
-                                                max_tokens=max_tokens,
                                                 prompt_length_limit=prompt_length_limit)
     def _infinite_data_loader(self, data_loader):
         while True:
@@ -119,7 +116,7 @@ class BeamSearchWorldModel(Generic[State, Action]):
                                            dataloader=self.test_dataloader,
                                            model=self.pred_model,
                                            temperature=self.pred_temperature,
-                                           max_tokens=self.max_tokens)
+                                           )
         return metric, eval_output
     
     
@@ -129,7 +126,7 @@ class BeamSearchWorldModel(Generic[State, Action]):
                                            dataloader=self.eval_dataloader,
                                            model=self.pred_model,
                                            temperature=self.pred_temperature,
-                                           max_tokens=self.max_tokens)
+                                           )
         correct = eval_output['correct']
         evaludate_output = dict(
             metric=metric,
@@ -138,8 +135,4 @@ class BeamSearchWorldModel(Generic[State, Action]):
         )
         
         return evaludate_output
-    
-    def _optim_model_completion(self, prompt):
-        messages = [{"role": "user", "content": prompt},]
-        response = gpt_chat_completion(messages=messages, model=self.optim_model, temperature=self.optim_temperature)['choices'][0]['message']['content'].strip()
-        return response
+

@@ -1,3 +1,6 @@
+# The code is modified based on Automatic Prompt Optimization with "Gradient Descent" and Beam Search
+# https://arxiv.org/abs/2305.03495
+
 from .prompts import *
 from .prompts.world_model_prompts import *
 from ..utils import *
@@ -7,12 +10,10 @@ import numpy as np
 class GradientDescent():
     def __init__(self, 
                  task, 
-                 
                  pred_model, 
                  optim_model,
                  forward_temperature=0, 
                  optim_temperature = 0,
-                 max_tokens=2048,
                  print_log = True,
                  logger = None,
                  num_new_prompts = 1,):
@@ -22,7 +23,6 @@ class GradientDescent():
         self.optim_model = optim_model
         self.forward_temperature = forward_temperature
         self.optim_temperature = optim_temperature
-        self.max_tokens = max_tokens
         self.logger = logger
         self.print_log = print_log if logger is not None else False
         self.num_new_prompts = num_new_prompts
@@ -40,8 +40,8 @@ class GradientDescent():
             self._batch_forward_func = batch_forward_completion
         elif pred_model in CHAT_COMPLETION_MODELS: 
             self._batch_forward_func = batch_forward_chatcompletion
-        elif pred_model in OPENSOURCE_MODELS:
-            self._batch_forward_func = batch_forward_flant5
+        elif pred_model in PALM_MODELS:
+            self._batch_forward_func = batch_forward_chatcompletion_palm
         else:
             raise ValueError(f"Model {pred_model} not supported.")
         
@@ -49,7 +49,7 @@ class GradientDescent():
     def forward(self, batch, cur_prompt):
         batch_size = len(batch['question'])
         batch_prompts =self._build_forward_prompts_func(batch['question'], cur_prompt)
-        responses = self._batch_forward_func(batch_prompts, model=self.pred_model, temperature=self.forward_temperature, max_tokens=self.max_tokens)
+        responses = self._batch_forward_func(batch_prompts, model=self.pred_model, temperature=self.forward_temperature)
         preds = self.task.batch_clean_responses(responses)
         
         labels = self.task.clean_labels(batch['answer'])

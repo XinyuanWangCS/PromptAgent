@@ -1,14 +1,12 @@
-from prompt_optim_agent.test_helper import *
-from prompt_optim_agent.utils import *
+# The MCTS algorithm code is adapted from Reasoning with Language Model is Planning with World Model
+# https://github.com/Ber666/llm-reasoners
 
-import itertools
-from copy import deepcopy
-import numpy as np
+import os
 import json
-import matplotlib.pyplot as plt
-from matplotlib.ticker import MaxNLocator
+import itertools
+import numpy as np
+from copy import deepcopy
 from typing import Generic, Optional
-
 from .base_algo import SearchAlgo, State, Action
 
 class MCTSNode(Generic[State, Action]):
@@ -27,7 +25,8 @@ class MCTSNode(Generic[State, Action]):
         A node in the MCTS search tree
 
         :param prompt: the current state
-        :param action: the action of the last optimization step, i.e., the state transition prompt from parent node to current node
+        :param action: the action of the last optimization step, 
+            i.e., the state transition prompt from parent node to current node
         :param parent: the parent node, None if root of the tree
         """
         self.id = next(MCTSNode.id_iter)
@@ -40,7 +39,7 @@ class MCTSNode(Generic[State, Action]):
         self.children: 'Optional[list[MCTSNode]]' = []
         self.cum_rewards: list[float] = []
         self.reward = 0.0
-        self.test_metric = 0.0
+        self.test_metric = -1.0
         self.uct = 0.0
         
         self.visited = 0
@@ -127,7 +126,6 @@ class MCTS(SearchAlgo, Generic[State, Action]):
         self.log = log
         self.logger = logger
         self.log_dir = log_dir
-        
         self.k = 1 # top-k reward nodes
         self.trace_in_each_iter: list[list[MCTSNode]] = None
         self.root: Optional[MCTSNode] = None
@@ -174,27 +172,28 @@ class MCTS(SearchAlgo, Generic[State, Action]):
     
     def _select(self, node: MCTSNode) -> list[MCTSNode]:
         """
-        Selection: From root node, keep selecting child node based on uct
+        Selection: 
+            From root node, keep selecting child node based on UCT
         """
         
-        if self.log: self.logger.info("Selecting:")
         path = []
         while True:
             path.append(node)
             node.visited += 1
             if len(node.children) == 0 or self.is_terminal_node(node):
-                if self.log: self.logger.info(f'Node {node.id} is leaf node. Finish selecting.\n')
                 return path
 
             node = self._uct_select(node)
-            if self.log: self.logger.info(f'Select node {node.id}: depth {node.depth}, reward: {node.reward:.4f} utc: {self._uct(node=node)}')
-    
+            if self.log: 
+                self.logger.info(f'Select node {node.id}: depth {node.depth}, reward: {node.reward:.4f} utc: {self._uct(node=node)}')
     
     def _expand(self, node: MCTSNode):
         """
         Expansion: 
+            Sample batches of data and perform state transition on the given node.
+            Generate new child nodes and calculate their temporary reward.
         """
-        
+        if self.log: self.logger.info(f'Expanding:')
         if self.is_terminal_node(node):
             node.is_terminal = True
             return
@@ -242,7 +241,6 @@ class MCTS(SearchAlgo, Generic[State, Action]):
             self.increase_threshold(node.reward)
             
             if self.is_terminal_node(node):
-                if self.log: self.logger.info(f"Node {node.id} is terminal node. Stop simulating.\n")
                 return
             
             if len(node.children) == 0:
@@ -299,7 +297,6 @@ class MCTS(SearchAlgo, Generic[State, Action]):
             self.min_threshold = self.root.reward
             self.increase_threshold(self.root.reward)
 
-
         self.trace_in_each_iter = []
         for i in range(self.iteration_num):
             if self.log: self.logger.info(f'---------------------  iteration {i} ------------------------')
@@ -309,13 +306,13 @@ class MCTS(SearchAlgo, Generic[State, Action]):
         
         mcts_output = self.prepare_output()
         self.output_to_json(mcts_output=mcts_output)
-        self.draw(mcts_output['paths_to_draw'])
         return self.trace_in_each_iter, mcts_output
 
     def __call__(self,
                  init_prompt: str,
                  iteration_num: int = None,
                  **kwargs):
+        
         MCTSNode.reset_id()
 
         iteration_paths, mcts_outputs = self.search(init_prompt, iteration_num)
@@ -398,7 +395,6 @@ class MCTS(SearchAlgo, Generic[State, Action]):
             path_qs = []
             path_rewards = []
             path_ucts = []
-            path_test_metrics = []
             
             for node in path:
                 path_ids.append(node.id)
@@ -411,7 +407,6 @@ class MCTS(SearchAlgo, Generic[State, Action]):
                 path_nodes.append(node)
                 path_qs.append(node.Q)
                 path_rewards.append(node.reward)
-                path_test_metrics.append(node.test_metric)
 
             paths_nodes.append(path_nodes)
             paths_ids.append(path_ids)
@@ -421,7 +416,6 @@ class MCTS(SearchAlgo, Generic[State, Action]):
             
             self.logger.info(f'path {i}: {path_ids} ')
             self.logger.info(f'mean values:   path_uct: {np.mean(path_ucts):.4f} | path_q: {np.mean(path_qs):.4f} | path_reward: {np.mean(path_rewards):.4f}')
-            self.logger.info(f'test_metrics : {path_test_metrics}')
             self.logger.info(f'path_ucts:  {path_ucts}')
             self.logger.info(f'paths_qs :  {paths_qs}')
             self.logger.info(f'path_reward : {path_rewards}')
@@ -432,25 +426,25 @@ class MCTS(SearchAlgo, Generic[State, Action]):
 
         best_q_path = paths_nodes[qs_rank[0]]
         best_reward_path = paths_nodes[rewards_rank[0]]
-        
         top_k_reward_nodes = sorted(self.nodes, key=lambda node: node.reward, reverse=True)[:self.k]
 
-        test_nodes_set = set(best_q_path + best_reward_path + top_k_reward_nodes)
-        for node in self.nodes:
-            if node in test_nodes_set:
-                self.eval_and_log_node(node, eval=True, log_metric=True, eval_type='test')
-        # log path rank   
+        if len(self.world_model.test_dataloader) != 0:
+            self.logger.info(f'\n----------------  test nodes ------------------') 
+            test_nodes_set = set(best_q_path + best_reward_path + top_k_reward_nodes)
+            for node in self.nodes:
+                if node in test_nodes_set:
+                    self.eval_and_log_node(node, eval=True, log_metric=True, eval_type='test') 
+        
+            self.logger.info(f'\n----------------  top_k_reward_nodes------------------') 
+            for node in top_k_reward_nodes:
+                self.eval_and_log_node(node, eval=False, log_metric=True, eval_type='test')
+
+            self.logger.info(f'\n----------------  best_reward_path------------------') 
+            for node in best_reward_path:
+                self.eval_and_log_node(node, eval=False, log_metric=True, eval_type='test')
         
         selected_node = sorted(best_reward_path, key=lambda node: self._sort_helper(node.reward), reverse=True)[0]
-
-        self.logger.info(f'\n----------------  top_k_reward_nodes------------------') 
-        for node in top_k_reward_nodes:
-            self.eval_and_log_node(node, eval=False, log_metric=True, eval_type='test')
-
-        self.logger.info(f'\n----------------  best_reward_path------------------') 
-        for node in best_reward_path:
-            self.eval_and_log_node(node, eval=False, log_metric=True, eval_type='test')
-            
+        
         return dict(
             all_paths = paths_nodes,
             all_nodes = self.nodes,
@@ -459,7 +453,6 @@ class MCTS(SearchAlgo, Generic[State, Action]):
             top_k_reward_nodes=top_k_reward_nodes,
             best_reward_path_last_node = [best_reward_path[-1]],
             best_reward_path_selected_node = [selected_node],
-            paths_to_draw = [best_reward_path]
         )
     
     def output_to_json(self, mcts_output):
@@ -469,107 +462,9 @@ class MCTS(SearchAlgo, Generic[State, Action]):
             paths.append([node.to_dict() for node in path])
         data_to_save['all_paths'] = paths
         
-        paths = []
-        for path in mcts_output['paths_to_draw']:
-            paths.append([node.to_dict() for node in path])
-        data_to_save['paths_to_draw'] = paths
-        
         for key in mcts_output:
-            if key != "all_paths" and key != 'paths_to_draw':
+            if key != "all_paths":
                 data_to_save[key] = [node.to_dict() for node in mcts_output[key]]
         with open(os.path.join(self.log_dir, 'data.json'), 'w') as f:
             json.dump(data_to_save, f, indent=4)
             
-    def draw(self, paths, plot_names=['test', 'reward', 'uct', 'eval']): #'all_paths_eval'
-        offset = np.linspace(-0.1, 0.1, len(paths))
-        
-        if 'test' in plot_names:
-            fig, ax = plt.subplots()
-            colors = plt.cm.jet(np.linspace(0, 1, len(paths)))
-            ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-            for idx, path in enumerate(paths):
-                depths = np.array([node.depth for node in path]) + offset[idx]
-                
-                metrics = [node.test_metric[0] if isinstance(node.test_metric, tuple) else node.test_metric for node in path]
-                ids = [node.id for node in path]
-
-                ax.plot(depths, metrics, color=colors[idx], marker='o')  
-                for d, r, id_ in zip(depths, metrics, ids):
-                    ax.annotate(str(id_), (d, r))
-
-            ax.set_title("Test Metric")
-            ax.set_xlabel("Depth")
-            ax.set_ylabel("Test")
-            plt.savefig(os.path.join(self.log_dir, 'test_metric.png'), bbox_inches='tight')
-        
-        if 'reward' in plot_names:
-            fig, ax = plt.subplots()
-            colors = plt.cm.jet(np.linspace(0, 1, len(paths)))
-            ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-            for idx, path in enumerate(paths):
-                depths = np.array([node.depth for node in path]) + offset[idx]
-                rewards = [node.reward for node in path]
-                ids = [node.id for node in path]
-
-                ax.plot(depths, rewards, color=colors[idx], marker='o')  
-                for d, r, id_ in zip(depths, rewards, ids):
-                    ax.annotate(str(id_), (d, r))
-
-            ax.set_title("Rewards")
-            ax.set_xlabel("Depth")
-            ax.set_ylabel("Rewards")
-            plt.savefig(os.path.join(self.log_dir, 'rewards.png'), bbox_inches='tight')
-        
-        if 'uct' in plot_names:
-            fig, ax = plt.subplots()
-            colors = plt.cm.jet(np.linspace(0, 1, len(paths)))
-            ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-            for idx, path in enumerate(paths):
-                depths = np.array([node.depth for node in path]) + offset[idx]
-                ucts = [node.uct for node in path]
-                ids = [node.id for node in path]
-
-                ax.plot(depths, ucts, color=colors[idx], marker='o')  
-                for d, r, id_ in zip(depths, ucts, ids):
-                    ax.annotate(str(id_), (d, r))
-
-            ax.set_title("UCT")
-            ax.set_xlabel("Depth")
-            ax.set_ylabel("UCT")
-            plt.savefig(os.path.join(self.log_dir, 'ucts.png'), bbox_inches='tight')
-        
-        if 'eval' in plot_names:
-            fig, ax = plt.subplots()
-            colors = plt.cm.jet(np.linspace(0, 1, len(paths)))
-            ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-            for idx, path in enumerate(paths):
-                depths = np.array([node.depth for node in path]) + offset[idx]
-                instant_rewards = [node.reward for node in path]
-                ids = [node.id for node in path]
-
-                ax.plot(depths, instant_rewards, color=colors[idx], marker='o')  
-                for d, r, id_ in zip(depths, instant_rewards, ids):
-                    ax.annotate(str(id_), (d, r))
-
-            ax.set_title("Eval Metric")
-            ax.set_xlabel("Depth")
-            ax.set_ylabel("Metric")
-            plt.savefig(os.path.join(self.log_dir, 'eval_metric.png'), bbox_inches='tight')
-            
-        if 'all_paths_eval' in plot_names:
-            fig, ax = plt.subplots()
-            colors = plt.cm.jet(np.linspace(0, 1, len(paths)))
-            ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-            for idx, path in enumerate(paths):
-                depths = np.array([node.depth for node in path]) + offset[idx]
-                instant_rewards = [node.reward for node in path]
-                ids = [node.id for node in path]
-
-                ax.plot(depths, instant_rewards, color=colors[idx], marker='o')  
-                for d, r, id_ in zip(depths, instant_rewards, ids):
-                    ax.annotate(str(id_), (d, r))
-
-            ax.set_title("Eval Metric All Paths")
-            ax.set_xlabel("Depth")
-            ax.set_ylabel("Metric")
-            plt.savefig(os.path.join(self.log_dir, 'eval_metric_all_paths.png'), bbox_inches='tight')

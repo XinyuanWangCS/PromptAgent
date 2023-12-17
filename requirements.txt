@@ -2,11 +2,7 @@ tqdm
 fire
 numpy
 scipy
-torch
 datasets
-# hf
-transformers
-# openai
 openai
 pytz
 matplotlib

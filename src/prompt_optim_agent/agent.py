@@ -1,43 +1,72 @@
+import os
 import time
-import datetime
-from .utils import *
-from tasks import *
+from datetime import  timedelta
+from .utils import get_pacific_time, create_logger
+from tasks import get_task
 from .world_model import get_world_model
 from .search_algo import get_search_algo
-from datetime import datetime, timedelta
-import pytz
+
 
 class BaseAgent():
     def __init__(self,
                  task_name: str,
                  search_algo: str,
+                 
                  pred_model: str,
-                 optim_model: str,
                  pred_temperature: float,
+                 optim_model: str,
                  optim_temperature: float,
+                 
                  batch_size: int,
                  train_size: int,
                  eval_size: int, 
                  test_size: int,
                  seed:int, 
-                 train_shuffle:bool,
-                 post_instruction,
+                 train_shuffle: bool,
+                 post_instruction: bool,
                  log_dir: str,
                  data_dir: str,
                  
                  expand_width: int,
                  num_new_prompts: int,
-
                  min_depth:int,
                  depth_limit: int,
-                 
                  iteration_num: int, 
                  w_exp:float, 
-                 
-                 # Beam Search
-                 beam_width:int = None,
+                
+                 beam_width:int = None, # Beam Search
                  **kwargs) -> None:
+        """
+        BaseAgent: set up task, logger, search algorithm, world model
         
+        :param task_name: the names of .py files in the tasks folder
+        :param search_algo: "mcts" or "beam_search"
+        :param pred_model: the model that answers the
+        :param pred_temperature: temperature of pred_model
+        :param optim_model: the optimizer model that gives error feedback and generate new prompts
+        :param optim_temperature: temperature of optim_model
+        
+        :param batch_size: batch size of each optimization step
+        :param train_size: training set size
+        :param eval_size: the set reserved for reward calculation
+        :param test_size: testing set size
+        :param train_shuffle: whether to shuffle the training set
+        :param seed: the seed for train/test split
+        :param post_instruction: whether the optimized prompt is behind the task question or in front of the question 
+            (True: question + prompt, False: prompt + question)
+            
+        :param log_dir: logger directory
+        :param data_dir: data file directory (if the data is stored in a file)
+        :param expand_width: number of optimization step in each expansion operation
+        :param num_new_prompts: number of new prompts sampled in each optimization step
+        
+        :param min_depth: minimum depth of MCTS (early stop is applied only when depth is deeper than min_depth)
+        :param depth_limit: maximum depth of MCTS
+        :param iteration_num: iteration number of MCTS
+        :param w_exp: the weight between exploitation and exploration, default 2.5
+        
+        :param beam_width: only used in beam search
+        """
         self.task_name = task_name
         self.train_size = train_size
         self.eval_size = eval_size
@@ -54,14 +83,11 @@ class BaseAgent():
                                         seed=seed,
                                         post_instruction=post_instruction,
                                         data_dir = data_dir)
-        test_set_size = self.task.get_dataset_size('test')
-        real_eval_size = self.task.get_dataset_size('eval')
+
         if data_dir is not None and task_name == "bigbench":
             task_name = task_name + "_" + data_dir.split('/')[-1].split('.')[-2]
-        current_time = datetime.now()
-        pacific = pytz.timezone('US/Pacific')
-        pacific_time = current_time.astimezone(pacific)
-        exp_name = f'{pacific_time.strftime("%Y%m%d_%H%M")}-{task_name}-algo_{search_algo}-batch_{batch_size}-train_{train_size}-eval_{real_eval_size}-test_{test_set_size}'
+        
+        exp_name = f'{get_pacific_time().strftime("%Y%m%d_%H%M%S")}-{task_name}-algo_{search_algo}-batch_{batch_size}-train_{train_size}'
         
         self.log_dir = os.path.join(log_dir, exp_name)
         self.logger = create_logger(self.log_dir, f'{exp_name}', log_mode='train')
@@ -71,14 +97,11 @@ class BaseAgent():
         self.world_model = get_world_model(search_algo)(
             task=self.task, 
             logger=self.logger, 
-            # model
             pred_model=pred_model,
             pred_temperature= pred_temperature,
             optim_model=optim_model, 
             optim_temperature=optim_temperature,
-            # number of new prompts sampled in each optimization step
             num_new_prompts = num_new_prompts,
-            # Dataset
             train_shuffle = train_shuffle,
             train_batch_size = batch_size,
             )
@@ -86,24 +109,23 @@ class BaseAgent():
         self.search_algo = get_search_algo(search_algo)(
             task=self.task, 
             world_model=self.world_model, 
-            # Data and log
             logger=self.logger,
             log_dir = self.log_dir,
-            # Search
             min_depth=min_depth,
             depth_limit=depth_limit,
             expand_width=expand_width,
-            # MCTS
             iteration_num = iteration_num,
             w_exp=w_exp,
-            #BeamSearch
             beam_width=beam_width,
             )
-
         
     def run(self, init_state, iteration_num):
+        """
+        Start searching from initial prompt
+        """
         self.logger.info(f'init_prompt: {init_state}')
         start_time = time.time()
+        
         states, result_dict = self.search_algo.search(init_state=init_state, iteration_num=iteration_num)
         end_time = time.time()
         exe_time = str(timedelta(seconds=end_time-start_time)).split('.')[0]
@@ -111,15 +133,14 @@ class BaseAgent():
         return states, result_dict
     
     def log_vars(self):
+        """
+        Log arguments
+        """
         ignored_print_vars = ['logger']
         vars_dict = vars(self)
         for var_name in vars_dict:
             if var_name in ignored_print_vars: continue
             var_value = vars_dict[var_name]
             self.logger.info(f'{var_name} : {var_value}')
+
     
-    @staticmethod   
-    def pacific_time_formatter(record):
-        pacific = pytz.timezone('US/Pacific')
-        dt = datetime.fromtimestamp(record.created, pacific)
-        return dt.strftime('%Y-%m-%d %H:%M:%S')

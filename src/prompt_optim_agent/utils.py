@@ -2,30 +2,36 @@ import os
 import time
 import openai 
 import logging
-from transformers import T5ForConditionalGeneration, T5Tokenizer
-import torch
 from glob import glob
 import google.generativeai as palm
+from datetime import datetime
+import pytz
 
-def openai_key_config(api_key=None, key_file = '../api_keys.txt'):
-    if api_key is not None and api_key.startswith('AIza'):
-        palm.configure(api_key=api_key)
-        return
-    
-    if api_key is not None:
-        print(f'api_key: {api_key}')
-        openai.api_key = api_key.strip()
-        return
-    if not os.path.exists(key_file):
-        raise FileNotFoundError(f"Please enter your API key in {key_file}")
-    api_key = open(key_file).readlines()[0].strip()
-    print(f'api_key: {api_key}')
-    openai.api_key = api_key
-
+# Supported models
 CHAT_COMPLETION_MODELS = ['gpt-3.5-turbo', 'gpt-3.5-turbo-0301', 'gpt-4', 'gpt-4-0314']
 COMPLETION_MODELS =  ['text-davinci-003', 'text-davinci-002','code-davinci-002']
-OPENSOURCE_MODELS = ['flan-t5']
 PALM_MODELS = ['models/chat-bison-001']
+
+def get_pacific_time():
+    current_time = datetime.now()
+    pacific = pytz.timezone('US/Pacific')
+    pacific_time = current_time.astimezone(pacific)
+    return pacific_time
+    
+def api_key_config(api_key):
+    if api_key is not None and api_key.startswith('AIza'):
+        # PaLM2 keys start with AIza
+        print(f'Set PaLM2 API: {api_key}')
+        palm.configure(api_key=api_key.strip())
+        return
+    
+    # set up key from command
+    if api_key is not None:
+        print(f'Set OpenAI API: {api_key}')
+        openai.api_key = api_key.strip()
+        return
+    
+    raise ValueError(f"api_key error: {api_key}")
 
 
 def create_logger(logging_dir, name, log_mode='train'):
@@ -53,7 +59,10 @@ def create_logger(logging_dir, name, log_mode='train'):
     logging.getLogger("datasets").setLevel(logging.CRITICAL)
     return logger
 
-def batch_forward_chatcompletion(batch_prompts, model='gpt-3.5-turbo', temperature=0, max_tokens=1024):
+def batch_forward_chatcompletion(batch_prompts, model='gpt-3.5-turbo', temperature=0):
+    """
+    Input a batch of prompts to openai chat API and retrieve the answers.
+    """
     responses = []
     for prompt in batch_prompts:
         messages = [{"role": "user", "content": prompt},]
@@ -61,7 +70,10 @@ def batch_forward_chatcompletion(batch_prompts, model='gpt-3.5-turbo', temperatu
         responses.append(response['choices'][0]['message']['content'].strip())
     return responses
 
-def batch_forward_chatcompletion_palm(batch_prompts, model='models/chat-bison-001', temperature=0, max_tokens=1024):
+def batch_forward_chatcompletion_palm(batch_prompts, model='models/chat-bison-001', temperature=0):
+    """
+    Input a batch of prompts to PaLM chat API and retrieve the answers.
+    """
     responses = []
     for prompt in batch_prompts:
         response = gpt_palm_completion(messages=prompt, temperature=temperature, model=model)
@@ -73,8 +85,11 @@ def batch_forward_chatcompletion_palm(batch_prompts, model='models/chat-bison-00
         responses.append(response.last.strip())
     return responses
 
-def batch_forward_completion(batch_prompts, model='text-davinci-003', temperature=0, max_tokens=1024):
-    gpt_output = gpt_completion(prompt=batch_prompts, model=model, temperature=temperature, max_tokens=max_tokens)['choices']
+def batch_forward_completion(batch_prompts, model='text-davinci-003', temperature=0):
+    """
+    Input a batch of prompts to openai completion API and retrieve the answers.
+    """
+    gpt_output = gpt_completion(prompt=batch_prompts, model=model, temperature=temperature)['choices']
     responses = []
     for response in gpt_output:
         responses.append(response['text'].strip())
@@ -110,39 +125,3 @@ def gpt_completion(**kwargs):
             time.sleep(backoff_time)
             backoff_time *= 1.5
 
-def print_dict(d, space='  '):
-    s = ''
-    for k in d:
-        s+=f'{space}{k}:\n{space}{d}\n'
-    return s
-
-def batch_forward_flant5(batch_prompts, model='flan-t5', temperature=0, max_tokens=500):
-    flant5_model = T5ForConditionalGeneration.from_pretrained("google/flan-t5-large")
-    flant5_tokenizer = T5Tokenizer.from_pretrained("google/flan-t5-large")
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    responses = []
-    for prompt in batch_prompts:
-        input_ids = flant5_tokenizer(prompt, return_tensors="pt").input_ids.to(device)
-        outputs = flant5_model.generate(input_ids, max_length=500, bos_token_id=0)
-        response = flant5_tokenizer.decode(outputs[0], skip_special_tokens=True)
-        responses.append(response)
-    return responses
-
-def print_search_result_dict(result_dict):
-    print('\n--------------  state test result  -----------------')
-    for i in range(len(result_dict['state'])):
-        prompt = result_dict['state'][i]
-        test_acc = result_dict['test_acc'][i]
-        prompt_len = len(prompt.split(' '))
-        print(f'{i} | test_acc: {test_acc:.3f}  | length: {prompt_len} | prompt: {prompt.strip()}')
-    print('\n--------------  batch gd result  -----------------')
-    for i in range(len(result_dict['forward_acc'])):
-        prompt_before = result_dict['state'][i]
-        prompt_after = result_dict['state'][i+1]
-        forward_acc = result_dict['forward_acc'][i]
-        forward_correct = result_dict['forward_correct'][i]
-        re_forward_acc = result_dict['re_forward_acc'][i]
-        re_forward_correct = result_dict['re_forward_correct'][i]
-        print(f'batch {i}')
-        print(f'prompt_before: {prompt_before}\nforward_acc   : {forward_acc} correct:{forward_correct}')
-        print(f'prompt_after: {prompt_after}\nre_forward_acc: {re_forward_acc} correct:{re_forward_correct}')
