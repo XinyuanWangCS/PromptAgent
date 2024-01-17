@@ -15,7 +15,7 @@ Unlike discovering magic/local prompt variants as existing prompt optimization m
 
 
 ## News
-- Jan. 16, 2024: PromptAgent has been accepted by ICLR 2024!
+- Jan. 16, 2024: PromptAgent has been accepted by ICLR 2024!  
 - Dec. 17, 2023: Refined the code for ease of reading and use by users.
 
 ## Installation
