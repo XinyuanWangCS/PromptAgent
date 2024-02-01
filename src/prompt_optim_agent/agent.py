@@ -5,44 +5,49 @@ from .utils import get_pacific_time, create_logger
 from tasks import get_task
 from .world_model import get_world_model
 from .search_algo import get_search_algo
-
+from .language_model import get_language_model
 
 class BaseAgent():
-    def __init__(self,
-                 task_name: str,
-                 search_algo: str,
-                 
-                 pred_model: str,
-                 pred_temperature: float,
-                 optim_model: str,
-                 optim_temperature: float,
-                 
-                 batch_size: int,
-                 train_size: int,
-                 eval_size: int, 
-                 test_size: int,
-                 seed:int, 
-                 train_shuffle: bool,
-                 post_instruction: bool,
-                 log_dir: str,
-                 data_dir: str,
-                 
-                 expand_width: int,
-                 num_new_prompts: int,
-                 min_depth:int,
-                 depth_limit: int,
-                 iteration_num: int, 
-                 w_exp:float, 
-                
-                 beam_width:int = None, # Beam Search
-                 **kwargs) -> None:
+    def __init__(
+        self,
+        task_name: str,
+        search_algo: str,
+        
+        base_model_type:str,
+        base_model_name: str,
+        base_temperature: float,
+        optim_model_type:str,
+        optim_model_name: str,
+        optim_temperature: float,
+        
+        batch_size: int,
+        train_size: int,
+        eval_size: int, 
+        test_size: int,
+        seed:int, 
+        train_shuffle: bool,
+        post_instruction: bool,
+        log_dir: str,
+        data_dir: str,
+        
+        expand_width: int,
+        num_new_prompts: int,
+        min_depth:int,
+        depth_limit: int,
+        iteration_num: int, 
+        w_exp:float, 
+        print_log: bool,
+        base_model_api_key:str = None,
+        optim_model_api_key:str = None,
+        beam_width:int = None, # Beam Search
+        **kwargs) -> None:
         """
         BaseAgent: set up task, logger, search algorithm, world model
         
         :param task_name: the names of .py files in the tasks folder
         :param search_algo: "mcts" or "beam_search"
-        :param pred_model: the model that answers the
-        :param pred_temperature: temperature of pred_model
+        :param base_model: the model that answers the
+        :param base_temperature: temperature of base_model
         :param optim_model: the optimizer model that gives error feedback and generate new prompts
         :param optim_temperature: temperature of optim_model
         
@@ -93,14 +98,27 @@ class BaseAgent():
         self.logger = create_logger(self.log_dir, f'{exp_name}', log_mode='train')
         self.logger.info(exp_name)
         self.log_vars()
-
+        self. print_log = print_log
+        
+        self.base_model = get_language_model(base_model_type)(
+            model = base_model_name,
+            temperature = base_temperature,
+            api_key=base_model_api_key,
+        )
+        if optim_model_api_key is None:
+            optim_model_api_key = base_model_api_key
+            
+        self.optim_model = get_language_model(optim_model_type)(
+            model = optim_model_name,
+            temperature = optim_temperature,
+            api_key=optim_model_api_key,
+        )
+        
         self.world_model = get_world_model(search_algo)(
             task=self.task, 
             logger=self.logger, 
-            pred_model=pred_model,
-            pred_temperature= pred_temperature,
-            optim_model=optim_model, 
-            optim_temperature=optim_temperature,
+            base_model=self.base_model,
+            optim_model=self.optim_model, 
             num_new_prompts = num_new_prompts,
             train_shuffle = train_shuffle,
             train_batch_size = batch_size,

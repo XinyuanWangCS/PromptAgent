@@ -10,19 +10,15 @@ import numpy as np
 class GradientDescent():
     def __init__(self, 
                  task, 
-                 pred_model, 
+                 base_model, 
                  optim_model,
-                 forward_temperature=0, 
-                 optim_temperature = 0,
                  print_log = True,
                  logger = None,
                  num_new_prompts = 1,):
 
         self.task = task
-        self.pred_model = pred_model
+        self.base_model = base_model
         self.optim_model = optim_model
-        self.forward_temperature = forward_temperature
-        self.optim_temperature = optim_temperature
         self.logger = logger
         self.print_log = print_log if logger is not None else False
         self.num_new_prompts = num_new_prompts
@@ -36,20 +32,13 @@ class GradientDescent():
         self.example_temlate = example_template_v0
         
         self._build_forward_prompts_func = task.build_forward_prompts_completion
-        if pred_model in COMPLETION_MODELS:
-            self._batch_forward_func = batch_forward_completion
-        elif pred_model in CHAT_COMPLETION_MODELS: 
-            self._batch_forward_func = batch_forward_chatcompletion
-        elif pred_model in PALM_MODELS:
-            self._batch_forward_func = batch_forward_chatcompletion_palm
-        else:
-            raise ValueError(f"Model {pred_model} not supported.")
+        self._batch_forward_func = self.base_model.batch_forward_func
         
 
     def forward(self, batch, cur_prompt):
         batch_size = len(batch['question'])
         batch_prompts =self._build_forward_prompts_func(batch['question'], cur_prompt)
-        responses = self._batch_forward_func(batch_prompts, model=self.pred_model, temperature=self.forward_temperature)
+        responses = self._batch_forward_func(batch_prompts)
         preds = self.task.batch_clean_responses(responses)
         
         labels = self.task.clean_labels(batch['answer'])
@@ -119,13 +108,6 @@ class GradientDescent():
         error_string = ''.join(error_examples)
         return error_string
 
-    def _optim_model_completion(self, model_input):
-        messages = [{"role": "user", "content": model_input},]
-        response = gpt_chat_completion(messages=messages, 
-                                       model=self.optim_model, 
-                                       temperature=self.optim_temperature)['choices'][0]['message']['content'].strip()
-        return response
-
     def _build_prompt_trajectory_str(self, prompts):
         prompt_path_str = ""
         prompt_path_str_tempelate = "({index}) {prompt}\n"
@@ -138,10 +120,9 @@ class GradientDescent():
         
         gradient_prompt = self.gradient_prompt_tempelate.format(cur_prompt=cur_prompt, 
                                                                 error_string=error_string)
-        gradient = self._optim_model_completion(gradient_prompt)
+        gradient = self.optim_model.generate(gradient_prompt)
         
         if self.print_log:
-            
             log_str = gradient_log_tempelate.format(gradient_prompt=gradient_prompt,
                                                     gradient=gradient)
 
@@ -163,7 +144,7 @@ class GradientDescent():
                                                                 gradient=gradient, 
                                                                 trajectory_prompts=trajectory_prompts,
                                                                 steps_per_gradient=steps_per_gradient)
-        response = self._optim_model_completion(optimize_prompt)
+        response = self.optim_model.generate(optimize_prompt)
         optimized_prompt = self._clean_optim_response(response)
         if self.print_log:
             log_str = optimize_log_tempelate.format(optimize_prompt=optimize_prompt,

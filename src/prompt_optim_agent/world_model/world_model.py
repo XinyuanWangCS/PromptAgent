@@ -8,16 +8,15 @@ class WorldModel(Generic[State, Action]):
                  task,
                  logger,
                  
-                 pred_model: str,
+                 base_model: str,
                  optim_model: str,
-                 pred_temperature: float, 
-                 optim_temperature: float,
                  num_new_prompts = 1,
                  
                  train_shuffle = True,
                  train_batch_size: int = 5,
                  test_batch_size: int = 1,
                  eval_batch_size: int = 1,
+                 print_log: bool = True,
                  **kwargs) -> None:
         
         """
@@ -29,10 +28,8 @@ class WorldModel(Generic[State, Action]):
         
         self.task = task
         self.logger = logger
-        self.pred_model = pred_model
-        self.pred_temperature=pred_temperature
+        self.base_model = base_model
         self.optim_model = optim_model
-        self.optim_temperature = optim_temperature
         self.num_new_prompts = num_new_prompts
         
         self.train_shuffle = train_shuffle
@@ -54,11 +51,10 @@ class WorldModel(Generic[State, Action]):
         self.gradient_descent = GradientDescent(
             task=self.task, 
             logger=self.logger, 
-            pred_model=pred_model, 
+            base_model=base_model, 
             optim_model=optim_model, 
             num_new_prompts = num_new_prompts,
-            forward_temperature=pred_temperature, 
-            optim_temperature = optim_temperature,
+            print_log=print_log
             )
         
         self.log_vars()
@@ -180,14 +176,7 @@ class WorldModel(Generic[State, Action]):
             eval_output: the input question and predictions for each example in the dataloader
         """
         build_forward_prompts_func = task.build_forward_prompts_completion
-        if self.pred_model in COMPLETION_MODELS:
-            batch_forward_func = batch_forward_completion
-        elif self.pred_model in CHAT_COMPLETION_MODELS:
-            batch_forward_func = batch_forward_chatcompletion
-        elif self.pred_model in PALM_MODELS:
-            batch_forward_func = batch_forward_chatcompletion_palm
-        else:
-            raise ValueError(f"Model {self.pred_model} not supported.")
+        batch_forward_func = self.base_model.batch_forward_func
         
         all_questions = []
         all_labels = []
@@ -199,7 +188,7 @@ class WorldModel(Generic[State, Action]):
         pbar = tqdm(dataloader, leave=False)
         for batch in pbar:
             batch_prompts = build_forward_prompts_func(batch['question'], eval_prompt)
-            responses = batch_forward_func(batch_prompts, model=self.pred_model, temperature=self.pred_temperature)
+            responses = batch_forward_func(batch_prompts)
             preds = task.batch_clean_responses(responses)
             labels = task.clean_labels(batch['answer'])
             all_preds.extend(preds)

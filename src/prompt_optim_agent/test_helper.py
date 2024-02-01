@@ -5,8 +5,12 @@ from datetime import  timedelta
 from .world_model.prompts import *
 from tasks import *
 from .utils import *
+from .language_model import get_language_model
 
 def eval(
+    base_model_type,
+    base_model_name,
+    temperature = 0.0,
     task_name = None,
     eval_prompt=None, 
     prompt_file=None, 
@@ -15,13 +19,11 @@ def eval(
     train_size=None, 
     eval_size=None, 
     test_size=None, 
-    pred_model='gpt-3.5-turbo', 
     batch_size=1, 
-    temperature=0, 
     log_dir='logs/prompt_test_logs', 
     log_examples=True,
     data_dir=None, 
-    api_key=None, 
+    api_key = None,
     **kwargs):
     
     '''
@@ -38,7 +40,6 @@ def eval(
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
         
-    api_key_config(api_key)
     logger = create_logger(log_dir, task_name, log_mode='test')
     
     task = get_task(task_name)(
@@ -51,20 +52,17 @@ def eval(
     
     test_dataloader = task.get_dataloader('test', batch_size=1)
     
+    base_model = get_language_model(base_model_type)(
+            model = base_model_name,
+            temperature = temperature,
+            api_key=api_key,
+        )
     build_forward_prompts_func = task.build_forward_prompts_completion
-    if pred_model in COMPLETION_MODELS:
-        batch_forward_func = batch_forward_completion
-    elif pred_model in CHAT_COMPLETION_MODELS:
-        batch_forward_func = batch_forward_chatcompletion
-    elif pred_model in PALM_MODELS:
-        batch_forward_func = batch_forward_chatcompletion_palm
-    else:
-        raise ValueError(f"Model {pred_model} not supported.")
+    batch_forward_func = base_model.batch_forward_func
     
     logger.info(f'task_name: {task_name}')
     logger.info(f'eval_prompt: {eval_prompt}\n')
     logger.info(f'testset size: {int(len(test_dataloader)*batch_size)}, shuffle: {False}, post_instruction: {post_instruction}')
-    logger.info(f'Eval model: {pred_model}, temperature: {temperature}')
     logger.info(f'prompt example: \n{build_forward_prompts_func(["example_question"], eval_prompt)[0]}\n')
 
     all_questions = []
@@ -77,7 +75,7 @@ def eval(
     count = 0
     for batch in pbar:
         batch_prompts = build_forward_prompts_func(batch['question'], eval_prompt)
-        responses = batch_forward_func(batch_prompts, model=pred_model, temperature=temperature)
+        responses = batch_forward_func(batch_prompts)
         preds = task.batch_clean_responses(responses)
         labels = task.clean_labels(batch['answer'])
         all_preds.extend(preds)
@@ -134,20 +132,13 @@ def eval(
             'all_preds':all_preds
             }
 
-def eval_instruction_with_loader(task, eval_prompt, dataloader, model='gpt-3.5-turbo', temperature=0, record_outputs=True):
+def eval_instruction_with_loader(task, eval_prompt, base_model, dataloader,  temperature=0, record_outputs=True):
     '''
         evaluate cur_prompt on task testing dataset
     '''
     
     build_forward_prompts_func = task.build_forward_prompts_completion
-    if model in COMPLETION_MODELS:
-        batch_forward_func = batch_forward_completion
-    elif model in CHAT_COMPLETION_MODELS:
-        batch_forward_func = batch_forward_chatcompletion
-    elif model in PALM_MODELS:
-        batch_forward_func = batch_forward_chatcompletion_palm
-    else:
-        raise ValueError(f"Model {model} not supported.")
+    batch_forward_func = base_model.batch_forward_func
     
     all_questions = []
     all_labels = []
@@ -159,7 +150,7 @@ def eval_instruction_with_loader(task, eval_prompt, dataloader, model='gpt-3.5-t
     pbar = tqdm(dataloader, leave=False)
     for batch in pbar:
         batch_prompts = build_forward_prompts_func(batch['question'], eval_prompt)
-        responses = batch_forward_func(batch_prompts, model=model, temperature=temperature)
+        responses = batch_forward_func(batch_prompts)
         preds = task.batch_clean_responses(responses)
         labels = task.clean_labels(batch['answer'])
         all_preds.extend(preds)

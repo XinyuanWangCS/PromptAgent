@@ -35,25 +35,25 @@ def config():
     parser.add_argument('--w_exp', type=float, default=2.5, help="Weight of MCTS.")
 
     # World Model
-    parser.add_argument('--pred_model', type=str, default='gpt-3.5-turbo', help='The base model that makes predictions.')
-    parser.add_argument('--optim_model', type=str, default='gpt-4', help='Prompt optimizer.') 
-    parser.add_argument('--pred_temperature', type=float, default=0.0)
+    parser.add_argument('--base_model_type', type=str, default='openai', help='The base model type, choosing from [openai, palm, hf_text2text, hf_textgeneration].')
+    parser.add_argument('--optim_model_type', type=str, default='openai', help='The optimiszr model type, choosing from [openai, palm, hf_text2text, hf_textgeneration].') 
+    parser.add_argument('--base_model_name', type=str, default='gpt-3.5-turbo', help='The base model that makes predictions.')
+    parser.add_argument('--optim_model_name', type=str, default='gpt-4', help='Prompt optimizer.') 
+    parser.add_argument('--base_temperature', type=float, default=0.0)
     parser.add_argument('--optim_temperature', type=float, default=1.0)
+    parser.add_argument('--base_model_api_key', type=str, default=None, help='OpenAI api key or PaLM 2 api key')
+    parser.add_argument('--optim_model_api_key', type=str, default=None, help='OpenAI api key or PaLM 2 api key')
     
     # Others
     parser.add_argument('--log_dir', type=str, default='../logs/', help='Log directory.')
     parser.add_argument('--data_dir', type=str, default=None, help='Path to the data file (if needed)')
-    parser.add_argument('--api_key', type=str, default=None, help='OpenAI api key or PaLM 2 api key')
+    parser.add_argument('--print_log', type=str2bool, default=True, help='Print the internal steps of MCTS')
     
     # BeamSearch
     parser.add_argument('--beam_width', type=int, default=3)
     args = parser.parse_args()
 
     args = vars(args)
-    
-    # Set up openai or PaLM keys
-    api_key_config(args['api_key'])
-    
     return args
 
 

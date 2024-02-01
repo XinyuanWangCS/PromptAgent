@@ -23,7 +23,8 @@ def config():
     parser.add_argument('--test_size', type=int, default=None)
     parser.add_argument('--seed', type=int, default=42)
     
-    parser.add_argument('--pred_model', type=str, default='gpt-3.5-turbo')
+    parser.add_argument('--base_model_type', type=str, default='openai', help='The base model type, choosing from [openai, palm, hf_text2text, hf_textgeneration].')
+    parser.add_argument('--base_model_name', type=str, default='gpt-3.5-turbo')
     parser.add_argument('--temperature', type=float, default=0)
     
     parser.add_argument('--log_dir', type=str, default='logs/', help='Log directory.')
@@ -31,6 +32,7 @@ def config():
     parser.add_argument('--data_dir', type=str, default=None)
     
     parser.add_argument('--api_key', type=str, default=None, help='OpenAI API key or PaLM2 API key')
+    
     args = parser.parse_args()
 
     args = vars(args)

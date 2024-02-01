@@ -1,10 +1,8 @@
 from .gradient_descent import *
-from typing import NamedTuple
 from ..test_helper import eval_instruction_with_loader
 from typing import Generic
 from ..search_algo.base_algo import State, Action
 from ..search_algo.beam_search import BeamNode
-from ..utils import gpt_chat_completion
 
 class BeamSearchWorldModel(Generic[State, Action]):
     def __init__(
@@ -13,10 +11,8 @@ class BeamSearchWorldModel(Generic[State, Action]):
         logger,
         
         # model
-        pred_model: str,
+        base_model: str,
         optim_model: str,
-        pred_temperature: float, 
-        optim_temperature: float,
         
         prompt_length_limit:int,
         num_new_prompts = 3,
@@ -29,10 +25,8 @@ class BeamSearchWorldModel(Generic[State, Action]):
         
         self.task = task
         self.logger = logger
-        self.pred_model = pred_model
+        self.base_model = base_model
         self.optim_model = optim_model
-        self.pred_temperature=pred_temperature
-        self.optim_temperature = optim_temperature
 
         self.train_dataloader = self.task.get_dataloader('train', 
                                                         batch_size=train_batch_size, 
@@ -47,11 +41,9 @@ class BeamSearchWorldModel(Generic[State, Action]):
                                                         shuffle=False)
         self.gradient_descent = GradientDescent(task=self.task, 
                                                 logger=self.logger, 
-                                                pred_model=pred_model, 
+                                                base_model=base_model, 
                                                 optim_model=optim_model, 
                                                 num_new_prompts = num_new_prompts,
-                                                forward_temperature=pred_temperature, 
-                                                optim_temperature = optim_temperature,
                                                 prompt_length_limit=prompt_length_limit)
     def _infinite_data_loader(self, data_loader):
         while True:
@@ -114,8 +106,7 @@ class BeamSearchWorldModel(Generic[State, Action]):
         metric, eval_output = eval_instruction_with_loader(task=self.task, 
                                            eval_prompt=prompt,
                                            dataloader=self.test_dataloader,
-                                           model=self.pred_model,
-                                           temperature=self.pred_temperature,
+                                           model=self.base_model,
                                            )
         return metric, eval_output
     
@@ -124,8 +115,7 @@ class BeamSearchWorldModel(Generic[State, Action]):
         metric, eval_output = eval_instruction_with_loader(task=self.task, 
                                            eval_prompt=prompt,
                                            dataloader=self.eval_dataloader,
-                                           model=self.pred_model,
-                                           temperature=self.pred_temperature,
+                                           model=self.base_model,
                                            )
         correct = eval_output['correct']
         evaludate_output = dict(
