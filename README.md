@@ -78,12 +78,12 @@ It takes around two hours to run the above experiment, which costs around $5 usi
 We can run `test.py` to test any prompt performance with the following commands:  
 Enter the prompt in the command line:
 ```bash
-python src/test.py --task_name bigbench --eval_prompt "Answer questions about a table of penguins and their attributes." --prompt_file "prompt file path" --train_size 70 --eval_size 50 --test_size 79 --seed 42 --base_model_type "openai" --base_model_name 'gpt-3.5-turbo' --data_dir "datasets/penguins_in_a_table.json" --api_key "your_api"
+python src/test.py --task_name bigbench --prompt "Answer questions about a table of penguins and their attributes." --prompt_file "prompt file path" --train_size 70 --eval_size 50 --test_size 79 --seed 42 --base_model_type "openai" --base_model_name 'gpt-3.5-turbo' --data_dir "datasets/penguins_in_a_table.json" --base_api_key "your_api"
 ```
 or   
 Put prompt in a .txt file if the prompt is very long:
 ```bash
-python src/test.py --task_name bigbench --prompt_file "prompt file path" --train_size 70 --eval_size 50 --test_size 79 --seed 42 --base_model_type "openai" --base_model_name 'gpt-3.5-turbo' --data_dir "datasets/penguins_in_a_table.json" --api_key "your_api"
+python src/test.py --task_name bigbench --prompt_file "prompt file path" --train_size 70 --eval_size 50 --test_size 79 --seed 42 --base_model_type "openai" --base_model_name 'gpt-3.5-turbo' --data_dir "datasets/penguins_in_a_table.json" --base_api_key "your_api"
 ```
 
 ## CTranslate model
@@ -92,7 +92,7 @@ python src/main.py --task_name bigbench --search_algo mcts --batch_size 5 --dept
 ```
 
 ```bash
-python src/main.py --task_name bigbench --search_algo mcts --batch_size 2 --depth_limit 2 --train_size 70 --eval_size 5 --test_size 0 --seed 42 --train_shuffle True --iteration_num 2 --expand_width 2 --post_instruction False --base_model_type ct_model --base_model_name 'mistralai/Mistral-7B-Instruct-v0.2' --base_model_path "/home/xinyuan/workspace/download_models/Mistral-7B-Instruct-v0.2_int8_float16" --optim_model_type openai --optim_model_name gpt-4-1106-preview --log_dir logs/ --data_dir datasets/penguins_in_a_table.json --init_prompt "Answer questions about a table of penguins and their attributes." --optim_api_key "your_openai_api_key"
+python src/test.py --task_name bigbench --prompt_file "/home/xinyuan/workspace/PromptAgent/logs/20240201_004802-bigbench_penguins_in_a_table-algo_mcts-batch_5-train_70_mistral_int8_float16/base_prompt.txt" --train_size 70 --eval_size 50 --test_size 79 --seed 42 --base_model_type "ct_model" --base_model_name 'mistralai/Mistral-7B-Instruct-v0.2' --data_dir "datasets/penguins_in_a_table.json" --base_model_path "/home/xinyuan/workspace/download_models/Mistral-7B-Instruct-v0.2_int8_float16"
 ```
 
 

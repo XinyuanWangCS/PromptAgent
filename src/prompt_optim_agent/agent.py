@@ -1,7 +1,7 @@
 import os
 import time
 from datetime import  timedelta
-from .utils import get_pacific_time, create_logger
+from .utils import get_pacific_time, create_logger, parse_model_args
 from tasks import get_task
 from .world_model import get_world_model
 from .search_algo import get_search_algo
@@ -92,7 +92,7 @@ class BaseAgent():
         self.log_vars()
         self. print_log = print_log
         
-        base_args, optim_args = self.parse_model_args(kwargs=kwargs)
+        base_args, optim_args = parse_model_args(kwargs=kwargs)
         self.base_model = get_language_model(base_model_type)(**base_args)
         self.optim_model = get_language_model(optim_model_type)(**optim_args) 
         
@@ -118,15 +118,7 @@ class BaseAgent():
             w_exp=w_exp,
             )
     
-    def parse_model_args(self, kwargs):
-        base_args = dict()
-        optim_args = dict()
-        for k in kwargs:
-            if k.startswith("base_"):
-                base_args[k.replace("base_", "")] = kwargs[k]
-            elif k.startswith("optim_"):
-                optim_args[k.replace("optim_", "")] = kwargs[k]
-        return base_args, optim_args
+    
     
     def run(self, init_state, iteration_num):
         """

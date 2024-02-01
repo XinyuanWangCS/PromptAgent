@@ -6,24 +6,26 @@ from .world_model.prompts import *
 from tasks import *
 from .utils import *
 from .language_model import get_language_model
+import glob
 
-def eval(
+
+
+def test(
     base_model_type,
-    base_model_name,
-    temperature = 0.0,
     task_name = None,
-    eval_prompt=None, 
+    prompt=None, 
     prompt_file=None, 
     post_instruction=False,
+    
     seed=None,   
     train_size=None, 
     eval_size=None, 
     test_size=None, 
+    
     batch_size=1, 
-    log_dir='logs/prompt_test_logs', 
+    log_dir='logs/', 
     log_examples=True,
     data_dir=None, 
-    api_key = None,
     **kwargs):
     
     '''
@@ -34,12 +36,13 @@ def eval(
         if os.path.exists(prompt_file):
             with open(prompt_file, 'r') as file:
                 eval_prompt = file.read()
+            log_dir = "/"+os.path.join(*(prompt_file.split("/")[:-1]))
         else:
             raise ValueError(f"prompt_file path doesn't exist: {prompt_file}")
-            
+    
+    log_dir = os.path.join(log_dir, "text_results")    
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
-        
     logger = create_logger(log_dir, task_name, log_mode='test')
     
     task = get_task(task_name)(
@@ -52,11 +55,8 @@ def eval(
     
     test_dataloader = task.get_dataloader('test', batch_size=1)
     
-    base_model = get_language_model(base_model_type)(
-            model = base_model_name,
-            temperature = temperature,
-            api_key=api_key,
-        )
+    base_args, _ = parse_model_args(kwargs=kwargs)
+    base_model = get_language_model(base_model_type)(**base_args)
     build_forward_prompts_func = task.build_forward_prompts_completion
     batch_forward_func = base_model.batch_forward_func
     
