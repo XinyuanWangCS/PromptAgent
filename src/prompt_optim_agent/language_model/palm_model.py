@@ -6,19 +6,19 @@ PALM_MODELS = ['models/chat-bison-001']
 class PaLMModel():
     def __init__(
         self,
-        model: str,
+        model_name: str,
         api_key: str,
         temperature: float,
         **kwargs):
         
-        self.model = model
+        self.model = model_name
         self.temperature = temperature
         self._api_key_config(api_key)
         
-        if model in PALM_MODELS:
+        if model_name in PALM_MODELS:
             self.batch_forward_func = self.batch_forward_chatcompletion_palm
         else:
-            raise ValueError(f"Model {model} not supported.")
+            raise ValueError(f"Model {model_name} not supported.")
         
     def _api_key_config(self, api_key):
         # set up key from command

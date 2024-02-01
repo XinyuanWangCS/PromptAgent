@@ -14,11 +14,7 @@ class BaseAgent():
         search_algo: str,
         
         base_model_type:str,
-        base_model_name: str,
-        base_temperature: float,
         optim_model_type:str,
-        optim_model_name: str,
-        optim_temperature: float,
         
         batch_size: int,
         train_size: int,
@@ -37,9 +33,6 @@ class BaseAgent():
         iteration_num: int, 
         w_exp:float, 
         print_log: bool,
-        base_model_api_key:str = None,
-        optim_model_api_key:str = None,
-        beam_width:int = None, # Beam Search
         **kwargs) -> None:
         """
         BaseAgent: set up task, logger, search algorithm, world model
@@ -69,8 +62,7 @@ class BaseAgent():
         :param depth_limit: maximum depth of MCTS
         :param iteration_num: iteration number of MCTS
         :param w_exp: the weight between exploitation and exploration, default 2.5
-        
-        :param beam_width: only used in beam search
+
         """
         self.task_name = task_name
         self.train_size = train_size
@@ -100,19 +92,9 @@ class BaseAgent():
         self.log_vars()
         self. print_log = print_log
         
-        self.base_model = get_language_model(base_model_type)(
-            model = base_model_name,
-            temperature = base_temperature,
-            api_key=base_model_api_key,
-        )
-        if optim_model_api_key is None:
-            optim_model_api_key = base_model_api_key
-            
-        self.optim_model = get_language_model(optim_model_type)(
-            model = optim_model_name,
-            temperature = optim_temperature,
-            api_key=optim_model_api_key,
-        )
+        base_args, optim_args = self.parse_model_args(kwargs=kwargs)
+        self.base_model = get_language_model(base_model_type)(**base_args)
+        self.optim_model = get_language_model(optim_model_type)(**optim_args) 
         
         self.world_model = get_world_model(search_algo)(
             task=self.task, 
@@ -134,9 +116,18 @@ class BaseAgent():
             expand_width=expand_width,
             iteration_num = iteration_num,
             w_exp=w_exp,
-            beam_width=beam_width,
             )
-        
+    
+    def parse_model_args(self, kwargs):
+        base_args = dict()
+        optim_args = dict()
+        for k in kwargs:
+            if k.startswith("base_"):
+                base_args[k.replace("base_", "")] = kwargs[k]
+            elif k.startswith("optim_"):
+                optim_args[k.replace("optim_", "")] = kwargs[k]
+        return base_args, optim_args
+    
     def run(self, init_state, iteration_num):
         """
         Start searching from initial prompt

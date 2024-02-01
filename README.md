@@ -33,11 +33,7 @@ pip install -r requirements.txt
 
 The following command run PromptAgent to craft an expert prompt for a BIG-bench task, [penguins_in_a_table](https://github.com/google/BIG-bench/tree/main/bigbench/benchmark_tasks/penguins_in_a_table). The running could take some time depending on the inference speed of OpenAI APIs and size of datasets. 
 ```bash
-python src/main.py --task_name bigbench --search_algo mcts --batch_size 5 --depth_limit 5 --train_size 70 --eval_size 50 --test_size 0 --seed 42 --train_shuffle True --iteration_num 10 --expand_width 3 --post_instruction False --base_model_type openai --base_model_name gpt-3.5-turbo --optim_model_type openai --optim_model_name gpt-4-1106-preview --log_dir logs/ --data_dir datasets/penguins_in_a_table.json --init_prompt "Answer questions about a table of penguins and their attributes." --base_model_api_key "your_api_key" 
-```
-
-```bash
-python src/main.py --task_name bigbench --search_algo mcts --batch_size 5 --depth_limit 5 --train_size 70 --eval_size 50 --test_size 0 --seed 42 --train_shuffle True --iteration_num 10 --expand_width 3 --post_instruction False --base_model_type palm --base_model_name 'models/chat-bison-001' --optim_model_type openai --optim_model_name gpt-4-1106-preview --log_dir logs/ --data_dir datasets/penguins_in_a_table.json --init_prompt "Answer questions about a table of penguins and their attributes." --base_model_api_key "your_palm_api_key"  --optim_model_api_key "your_openai_api_key"
+python src/main.py --task_name bigbench --search_algo mcts --batch_size 5 --depth_limit 5 --train_size 70 --eval_size 50 --test_size 0 --seed 42 --train_shuffle True --iteration_num 10 --expand_width 3 --post_instruction False --base_model_type openai --base_model_name gpt-3.5-turbo --optim_model_type openai --optim_model_name gpt-4-1106-preview --log_dir logs/ --data_dir datasets/penguins_in_a_table.json --init_prompt "Answer questions about a table of penguins and their attributes." --base_api_key "your_api_key" 
 ```
 
 `penguins_in_a_table` is an table understanding task to answer questions about animals contained in tables. An example from the original dataset looks like this:
@@ -89,6 +85,16 @@ Put prompt in a .txt file if the prompt is very long:
 ```bash
 python src/test.py --task_name bigbench --prompt_file "prompt file path" --train_size 70 --eval_size 50 --test_size 79 --seed 42 --base_model_type "openai" --base_model_name 'gpt-3.5-turbo' --data_dir "datasets/penguins_in_a_table.json" --api_key "your_api"
 ```
+
+## CTranslate model
+```bash
+python src/main.py --task_name bigbench --search_algo mcts --batch_size 5 --depth_limit 5 --train_size 70 --eval_size 50 --test_size 0 --seed 42 --train_shuffle True --iteration_num 10 --expand_width 3 --post_instruction False --base_model_type ct_model --base_model_name 'mistralai/Mistral-7B-Instruct-v0.2' --base_model_path "/home/xinyuan/workspace/download_models/Mistral-7B-Instruct-v0.2_int8_float16" --optim_model_type openai --optim_model_name gpt-4-1106-preview --log_dir logs/ --data_dir datasets/penguins_in_a_table.json --init_prompt "Answer questions about a table of penguins and their attributes." --optim_api_key "your_openai_api_key"
+```
+
+```bash
+python src/main.py --task_name bigbench --search_algo mcts --batch_size 2 --depth_limit 2 --train_size 70 --eval_size 5 --test_size 0 --seed 42 --train_shuffle True --iteration_num 2 --expand_width 2 --post_instruction False --base_model_type ct_model --base_model_name 'mistralai/Mistral-7B-Instruct-v0.2' --base_model_path "/home/xinyuan/workspace/download_models/Mistral-7B-Instruct-v0.2_int8_float16" --optim_model_type openai --optim_model_name gpt-4-1106-preview --log_dir logs/ --data_dir datasets/penguins_in_a_table.json --init_prompt "Answer questions about a table of penguins and their attributes." --optim_api_key "your_openai_api_key"
+```
+
 
 ## How to add a new task?
 Our current tasks includes selection question tasks and NER tasks. Adding new selection tasks is relatively easy. Please refer to the .py files in the tasks folder. First, create a new task.py file and a new CustomTask class. Then, there are several task-specific functions to be implemented in your customized task.py file: 

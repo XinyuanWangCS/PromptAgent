@@ -41,16 +41,17 @@ def config():
     parser.add_argument('--optim_model_name', type=str, default='gpt-4', help='Prompt optimizer.') 
     parser.add_argument('--base_temperature', type=float, default=0.0)
     parser.add_argument('--optim_temperature', type=float, default=1.0)
-    parser.add_argument('--base_model_api_key', type=str, default=None, help='OpenAI api key or PaLM 2 api key')
-    parser.add_argument('--optim_model_api_key', type=str, default=None, help='OpenAI api key or PaLM 2 api key')
+    parser.add_argument('--base_api_key', type=str, default=None, help='OpenAI api key or PaLM 2 api key')
+    parser.add_argument('--optim_api_key', type=str, default=None, help='OpenAI api key or PaLM 2 api key')
+    parser.add_argument('--device', type=str, default="cuda")
+    parser.add_argument('--base_model_path', type=str, default=None)
+    parser.add_argument('--optim_model_path', type=str, default=None)
     
     # Others
     parser.add_argument('--log_dir', type=str, default='../logs/', help='Log directory.')
     parser.add_argument('--data_dir', type=str, default=None, help='Path to the data file (if needed)')
     parser.add_argument('--print_log', type=str2bool, default=True, help='Print the internal steps of MCTS')
-    
-    # BeamSearch
-    parser.add_argument('--beam_width', type=int, default=3)
+
     args = parser.parse_args()
 
     args = vars(args)

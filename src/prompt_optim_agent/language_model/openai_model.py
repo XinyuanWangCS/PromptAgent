@@ -7,23 +7,23 @@ COMPLETION_MODELS =  ['text-davinci-003', 'text-davinci-002','code-davinci-002']
 class OpenAIModel():
     def __init__(
         self,
-        model: str,
+        model_name: str,
         api_key: str,
         temperature: float,
         **kwargs):
         
-        self.model = model
+        self.model = model_name
         self.temperature = temperature
         self._api_key_config(api_key)
         
-        if model in COMPLETION_MODELS:
+        if model_name in COMPLETION_MODELS:
             self.batch_forward_func = self.batch_forward_completion
             self.generate = self.gpt_completion
-        elif model in CHAT_COMPLETION_MODELS: 
+        elif model_name in CHAT_COMPLETION_MODELS: 
             self.batch_forward_func = self.batch_forward_chatcompletion
             self.generate = self.gpt_chat_completion
         else:
-            raise ValueError(f"Model {model} not supported.")
+            raise ValueError(f"Model {model_name} not supported.")
         
     def _api_key_config(self, api_key):
         # set up key from command
