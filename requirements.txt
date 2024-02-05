@@ -6,3 +6,5 @@ datasets
 openai
 pytz
 matplotlib
+google-generativeai
+google-api-python-client
