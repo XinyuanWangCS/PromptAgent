@@ -2,7 +2,7 @@
 <img src="./images/Header.png" alt="Expert-level Prompting" title="Expert-level Prompting"/>
 </p>
 
-# PromptAgent
+# PromptAgent 2.0
 This is the official repo for "PromptAgent: Strategic Planning with Language Models Enables Expert-level Prompt Optimization".   PromptAgent is a novel automatic prompt optimization method that autonomously crafts prompts equivalent in quality to those handcrafted by experts, i.e., expert-level prompts. [[arXiv](https://arxiv.org/abs/2310.16427)]
 <p align="center">
 <img src="./images/expert_prompt_00.jpg" alt="Expert-level Prompting" width="700" title="Expert-level Prompting"/>
@@ -12,6 +12,17 @@ Unlike discovering magic/local prompt variants as existing prompt optimization m
 <img src="./images/mcts_00.jpg" alt="Expert-level Prompting" width="700" title="Expert-level Prompting"/>
 </p>
 
+```bash
+python src/pipeline.py --task_type answer_matching --search_algo mcts --batch_size 5 --depth_limit 5 --eval_size 25 --test_size 0 --seed 42 --train_shuffle True --iteration_num 6 --expand_width 3 --post_instruction False --base_model_type openai --base_model_name gpt-3.5-turbo --optim_model_type openai --optim_model_name gpt-4-turbo-preview --data_dir "datasets/selected_tasks/NIv2"   --init_method "simplify_prompt" --task_list "datasets/generated_tasks/NIv2_target_tasks.txt" --log_dir "outputs/NIv2" --if_test False --base_api_key "your api"
+```
+
+```bash
+python src/pipeline.py --task_type cot --search_algo mcts --batch_size 5 --depth_limit 5 --eval_size 25 --test_size 0 --if_test False --seed 42 --train_shuffle True --iteration_num 6 --expand_width 3 --post_instruction False --base_model_type openai --base_model_name gpt-3.5-turbo --optim_model_type openai --optim_model_name gpt-4-turbo-preview --data_dir "datasets/selected_tasks/CoT"   --init_method "sample_from_data" --task_list "datasets/generated_tasks/NIv2_target_tasks.txt" --log_dir "outputs/CoT" --base_api_key "your api"
+```
+
+```bash
+python src/pipeline.py --task_type answer_matching --search_algo mcts --batch_size 5 --depth_limit 5 --eval_size 25 --test_size 0 --if_test False --seed 42 --train_shuffle True --iteration_num 6 --expand_width 3 --post_instruction False --base_model_type openai --base_model_name gpt-3.5-turbo --optim_model_type openai --optim_model_name gpt-4-turbo-preview --data_dir "datasets/selected_tasks/Flan2021"   --init_method "sample_from_data" --task_list "datasets/generated_tasks/Flan2021_target_tasks.txt" --log_dir "outputs/Flan2021" --base_api_key "your api"
+```
 
 
 ## News
@@ -33,7 +44,7 @@ pip install -r requirements.txt
 
 The following command run PromptAgent to craft an expert prompt for a BIG-bench task, [penguins_in_a_table](https://github.com/google/BIG-bench/tree/main/bigbench/benchmark_tasks/penguins_in_a_table). The running could take some time depending on the inference speed of OpenAI APIs and size of datasets. 
 ```bash
-python src/main.py --task_name bigbench --search_algo mcts --batch_size 5 --depth_limit 5 --train_size 70 --eval_size 50 --test_size 0 --seed 42 --train_shuffle True --iteration_num 10 --expand_width 3 --post_instruction False --base_model_type openai --base_model_name gpt-3.5-turbo --optim_model_type openai --optim_model_name gpt-4-1106-preview --log_dir logs/ --data_dir datasets/penguins_in_a_table.json --init_prompt "Answer questions about a table of penguins and their attributes." --base_api_key "your_api_key" 
+python src/main.py --task_name bigbench --search_algo mcts --batch_size 5 --depth_limit 5 --train_size 70 --eval_size 50 --test_size 0 --seed 42 --train_shuffle True --iteration_num 10 --expand_width 3 --post_instruction False --base_model_type openai --base_model_name gpt-3.5-turbo --optim_model_type openai --optim_model_name gpt-4-turbo-preview --log_dir logs/ --data_dir datasets/penguins_in_a_table.json --init_prompt "Answer questions about a table of penguins and their attributes." --base_api_key "your_api_key" 
 ```
 
 `penguins_in_a_table` is an table understanding task to answer questions about animals contained in tables. An example from the original dataset looks like this:
