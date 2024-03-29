@@ -12,19 +12,6 @@ Unlike discovering magic/local prompt variants as existing prompt optimization m
 <img src="./images/mcts_00.jpg" alt="Expert-level Prompting" width="700" title="Expert-level Prompting"/>
 </p>
 
-```bash
-python src/pipeline.py --task_type answer_matching --search_algo mcts --batch_size 5 --depth_limit 5 --eval_size 25 --test_size 0 --seed 42 --train_shuffle True --iteration_num 6 --expand_width 3 --post_instruction False --base_model_type openai --base_model_name gpt-3.5-turbo --optim_model_type openai --optim_model_name gpt-4-turbo-preview --data_dir "datasets/selected_tasks/NIv2"   --init_method "simplify_prompt" --task_list "datasets/generated_tasks/NIv2_target_tasks.txt" --log_dir "outputs/NIv2" --if_test False --base_api_key "your api"
-```
-
-```bash
-python src/pipeline.py --task_type cot --search_algo mcts --batch_size 5 --depth_limit 5 --eval_size 25 --test_size 0 --if_test False --seed 42 --train_shuffle True --iteration_num 6 --expand_width 3 --post_instruction False --base_model_type openai --base_model_name gpt-3.5-turbo --optim_model_type openai --optim_model_name gpt-4-turbo-preview --data_dir "datasets/selected_tasks/CoT"   --init_method "sample_from_data" --task_list "datasets/generated_tasks/NIv2_target_tasks.txt" --log_dir "outputs/CoT" --base_api_key "your api"
-```
-
-```bash
-python src/pipeline.py --task_type answer_matching --search_algo mcts --batch_size 5 --depth_limit 5 --eval_size 25 --test_size 0 --if_test False --seed 42 --train_shuffle True --iteration_num 6 --expand_width 3 --post_instruction False --base_model_type openai --base_model_name gpt-3.5-turbo --optim_model_type openai --optim_model_name gpt-4-turbo-preview --data_dir "datasets/selected_tasks/Flan2021"   --init_method "sample_from_data" --task_list "datasets/generated_tasks/Flan2021_target_tasks.txt" --log_dir "outputs/Flan2021" --base_api_key "your api"
-```
-
-
 ## News
 - Jan. 16, 2024: PromptAgent has been accepted by ICLR 2024!  
 - Dec. 17, 2023: Refined the code for ease of reading and use by users.
@@ -97,11 +84,17 @@ Put prompt in a .txt file if the prompt is very long:
 python src/test.py --task_name bigbench --prompt_file "prompt file path" --train_size 70 --eval_size 50 --test_size 79 --seed 42 --base_model_type "openai" --base_model_name 'gpt-3.5-turbo' --data_dir "datasets/penguins_in_a_table.json" --base_api_key "your_api"
 ```
 
+
+## Huggingface TextGeneration Model
+```bash
+python src/main.py --task_name bigbench --search_algo mcts --batch_size 5 --depth_limit 5 --train_size 70 --eval_size 50 --test_size 0 --seed 42 --train_shuffle True --iteration_num 10 --expand_width 3 --post_instruction False --base_model_type hf_textgeneration --base_model_name "TinyLlama/TinyLlama-1.1B-Chat-v1.0" --optim_model_type openai --optim_model_name gpt-4-1106-preview --log_dir logs/ --data_dir datasets/penguins_in_a_table.json --init_prompt "Answer questions about a table of penguins and their attributes." --optim_api_key "your api key"
+```
 ## CTranslate model
+### Train
 ```bash
 python src/main.py --task_name bigbench --search_algo mcts --batch_size 5 --depth_limit 5 --train_size 70 --eval_size 50 --test_size 0 --seed 42 --train_shuffle True --iteration_num 10 --expand_width 3 --post_instruction False --base_model_type ct_model --base_model_name 'mistralai/Mistral-7B-Instruct-v0.2' --base_model_path "/home/xinyuan/workspace/download_models/Mistral-7B-Instruct-v0.2_int8_float16" --optim_model_type openai --optim_model_name gpt-4-1106-preview --log_dir logs/ --data_dir datasets/penguins_in_a_table.json --init_prompt "Answer questions about a table of penguins and their attributes." --optim_api_key "your_openai_api_key"
 ```
-
+### Test
 ```bash
 python src/test.py --task_name bigbench --prompt_file "/home/xinyuan/workspace/PromptAgent/logs/20240201_004802-bigbench_penguins_in_a_table-algo_mcts-batch_5-train_70_mistral_int8_float16/base_prompt.txt" --train_size 70 --eval_size 50 --test_size 79 --seed 42 --base_model_type "ct_model" --base_model_name 'mistralai/Mistral-7B-Instruct-v0.2' --data_dir "datasets/penguins_in_a_table.json" --base_model_path "/home/xinyuan/workspace/download_models/Mistral-7B-Instruct-v0.2_int8_float16"
 ```

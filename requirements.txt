@@ -6,3 +6,9 @@ datasets
 openai
 pytz
 matplotlib
+torch
+transformers
+google
+google-api-python-client
+google-generativeai
+ctranslate2

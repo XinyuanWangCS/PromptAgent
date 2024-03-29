@@ -4,17 +4,17 @@ import torch
 class HFTextGenerationModel():
     def __init__(
         self,
-        model: str,
+        model_name: str,
         temperature: float,
         device: str = "cuda" if torch.cuda.is_available() else "cpu",
         **kwargs):
         
-        self.model = model
+        self.model_name = model_name
         self.device = device
         self.temperature = temperature
         self.do_sample = True if temperature != 0 else False
-        self.tokenizer = AutoTokenizer.from_pretrained(model,trust_remote_code=True, truncate=True, padding=True)
-        self.model = AutoModelForCausalLM.from_pretrained(model,trust_remote_code=True).to(device)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True, truncate=True, padding=True)
+        self.model = AutoModelForCausalLM.from_pretrained(model_name, trust_remote_code=True).to(device)
         self.generate = self.batch_forward_func
         
     def batch_forward_func(self, batch_prompts):

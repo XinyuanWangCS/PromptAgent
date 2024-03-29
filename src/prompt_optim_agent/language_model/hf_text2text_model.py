@@ -4,22 +4,22 @@ import torch
 class HFText2TextModel():
     def __init__(
         self,
-        model: str,
+        model_name: str,
         temperature: float,
         device: str = "cuda" if torch.cuda.is_available() else "cpu",
         **kwargs):
         
-        self.model = model
+        self.model_name = model_name
         self.temperature = temperature
         self.device = device
         self.do_sample = True if temperature != 0 else False
         self.tokenizer = AutoTokenizer.from_pretrained(
-            model,
+            model_name,
             trust_remote_code=True,
             padding=True,
             truncate=True)
         self.model = AutoModelForSeq2SeqLM.from_pretrained(
-            model,
+            model_name,
             trust_remote_code=True).to(device)
         
         self.generate = self.batch_forward_func
