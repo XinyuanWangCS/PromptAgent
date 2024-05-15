@@ -1,3 +1,3 @@
 from . import *
 from .gradient_descent_prompts import *
-from .prompt_templates import *
+from .log_prompt_templates import *

@@ -13,6 +13,7 @@ Unlike discovering magic/local prompt variants as existing prompt optimization m
 </p>
 
 ## News
+- May  15, 2024: Different models (openai, palm, huggingface models) are supported by PromptAgent.
 - Jan. 16, 2024: PromptAgent has been accepted by ICLR 2024!  
 - Dec. 17, 2023: Refined the code for ease of reading and use by users.
 

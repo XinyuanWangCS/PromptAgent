@@ -12,6 +12,9 @@ def parse_model_args(kwargs):
                 base_args[k.replace("base_", "")] = kwargs[k]
             elif k.startswith("optim_"):
                 optim_args[k.replace("optim_", "")] = kwargs[k]
+        if (base_args["api_key"] is not None) and (optim_args["api_key"] is None):
+            optim_args["api_key"] = base_args["api_key"]
+
         return base_args, optim_args
     
 def get_pacific_time():

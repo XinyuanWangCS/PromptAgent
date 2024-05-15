@@ -5,8 +5,10 @@ import torch
 class CTranslateModel():
     def __init__(
         self,
-        model_name: str = "mistralai/Mistral-7B-v0.1",
-        model_path: str = "/home/xinyuan/workspace/download_models/Mistral-7B-Instruct-v0.2_int8_float16",
+        model_name: str,
+        # huggingface model name, e.g. "mistralai/Mistral-7B-v0.1"
+        model_path: str,
+        # your downloaded ct model path, e.g. "./workspace/download_models/Mistral-7B-Instruct-v0.2_int8_float16"
         temperature: float = 0,
         max_length: int = 512,
         device: str = "cuda" if torch.cuda.is_available() else "cpu",

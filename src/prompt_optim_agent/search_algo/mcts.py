@@ -185,7 +185,8 @@ class MCTS(SearchAlgo, Generic[State, Action]):
 
             node = self._uct_select(node)
             if self.log: 
-                self.logger.info(f'Select node {node.id}: depth {node.depth}, reward: {node.reward:.4f} utc: {self._uct(node=node)}')
+                self.logger.info(f'Select node {node.id}: depth {node.depth}, \
+                                 reward: {node.reward:.4f} utc: {self._uct(node=node)}')
     
     def _expand(self, node: MCTSNode):
         """
@@ -204,10 +205,8 @@ class MCTS(SearchAlgo, Generic[State, Action]):
         node.expand_times += 1
         while i < self.expand_width:
             batch = self.world_model.get_train_batch() #sample batch data
-            children, gradient_descent_output = self.world_model.step(node, batch) # optim step: sample new child nodes using one batch
-            
-            if gradient_descent_output['acc'] == -1: # No mistakes, resample batch
-                continue
+            children, gradient_descent_output = self.world_model.step(node, batch) 
+            # optim step: sample new child nodes using one batch
             
             i += 1
             for child_node in children: # There could be multiple children in one optim step (num_new_prompts>1)
@@ -235,7 +234,9 @@ class MCTS(SearchAlgo, Generic[State, Action]):
             if self.early_stop(node):
                 node.is_terminal = self.is_terminal_node(node)
                 self.increase_threshold(node.reward)
-                if self.log: self.logger.info(f"Early Stop: node {node.id}, reward: {node.reward}. MCTS threshold increases to {self.mcts_threshold}. Stop simulating.\n")
+                if self.log: self.logger.info(
+                    f"Early Stop: node {node.id}, reward: {node.reward}. \
+                    MCTS threshold increases to {self.mcts_threshold}. Stop simulating.\n")
                 return
             
             self.increase_threshold(node.reward)
@@ -247,8 +248,11 @@ class MCTS(SearchAlgo, Generic[State, Action]):
                 self._expand(node)
             
             rewards = [child.reward for child in node.children]
-            node = node.children[self.simulate_choice(rewards)]
-            
+            if len(rewards) != 0:
+                node = node.children[self.simulate_choice(rewards)]
+            else:
+                node.is_terminal = True
+                
             node.visited += 1
             path.append(node)
             
@@ -268,7 +272,9 @@ class MCTS(SearchAlgo, Generic[State, Action]):
             cum_reward = self.cal_cum_reward(rewards[::-1])
             cum_rewards.append(cum_reward)
             node.cum_rewards.append(cum_reward)
-            if self.log: self.logger.info(f'node {node.id}: depth {node.depth}, new cum_reward: {node.cum_rewards[-1]:.4f}')
+            if self.log: self.logger.info(
+                f'node {node.id}: depth {node.depth}, \
+                new cum_reward: {node.cum_rewards[-1]:.4f}')
             
         cum_rewards = cum_rewards[::-1]
         return cum_rewards
@@ -299,7 +305,8 @@ class MCTS(SearchAlgo, Generic[State, Action]):
 
         self.trace_in_each_iter = []
         for i in range(self.iteration_num):
-            if self.log: self.logger.info(f'---------------------  iteration {i} ------------------------')
+            if self.log: self.logger.info(
+                f'---------------------  iteration {i} ------------------------')
             
             path, cum_rewards = self.iterate(self.root)
             self.trace_in_each_iter.append(deepcopy(path))
@@ -326,7 +333,8 @@ class MCTS(SearchAlgo, Generic[State, Action]):
 
     def eval_and_log_node(self, node:MCTSNode, eval=False, log_metric=False, eval_type='test'):
         if node.parent is not None:
-            self.logger.info(f'node {node.id}:    parent: {node.parent.id} | depth: {node.depth} | visited: {node.visited} | expand_times: {node.expand_times}  | terminal: {node.is_terminal} | children: {len(node.children)}')
+            self.logger.info(f'node {node.id}:    \
+                             parent: {node.parent.id} | depth: {node.depth} | visited: {node.visited} | expand_times: {node.expand_times}  | terminal: {node.is_terminal} | children: {len(node.children)}')
         else:
             self.logger.info(f'node {node.id}:    parent: N/A | depth: {node.depth} | visited: {node.visited} | expand_times: {node.expand_times} | terminal: {node.is_terminal} | children: {len(node.children)}')
         self.logger.info(f'   reward: {node.reward:.4f} | Q: {node.Q:.4f} | uct: {self._uct(node):.4f} | cum_rewards: {node.cum_rewards}')

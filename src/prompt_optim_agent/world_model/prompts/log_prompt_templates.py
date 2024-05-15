@@ -1,14 +1,6 @@
 # log prompts
+
 forward_log_tempelate = """---------------\tforward\t----------------
-cur_prompt:\n{cur_prompt}
-batch_prompts:\n{batch_prompts}
-responses:\n{responses}
-labels:  {labels}
-preds:   {preds}
-correct: {correct}
-acc:     {acc}
-"""
-forward_log_tempelate_v1 = """---------------\tforward\t----------------
 cur_prompt:\n{cur_prompt}
 labels:  {labels}
 preds:   {preds}

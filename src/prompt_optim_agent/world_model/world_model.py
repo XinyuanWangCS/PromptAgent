@@ -117,20 +117,17 @@ class WorldModel(Generic[State, Action]):
         helper_data = dict(trajectory_prompts=trajectory_prompts)
         
         gradient_descent_output = self.gradient_descent(batch, node.prompt, helper_data) 
-        if gradient_descent_output['acc']==-1:
-            # All correct situation.
-            return [], gradient_descent_output
         
         new_nodes = []
         for prompt in gradient_descent_output['optimized_prompts']:
             child_node = MCTSNode(
                 prompt=prompt, 
-                action=gradient_descent_output['gradient'], 
+                action=gradient_descent_output['optimized_prompts'], 
                 parent=node)
             new_nodes.append(child_node)
         
         return new_nodes, gradient_descent_output
-    
+        
     def evaluate_child_node(self, node:MCTSNode):
         """
         Evaluate the given node on eval_dataloader to calculate the reward.

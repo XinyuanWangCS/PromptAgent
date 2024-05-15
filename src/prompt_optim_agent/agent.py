@@ -92,7 +92,11 @@ class BaseAgent():
         self.log_vars()
         self. print_log = print_log
         
+        self.logger.info("*****************")
+        self.logger.info(kwargs)
         base_args, optim_args = parse_model_args(kwargs=kwargs)
+        self.logger.info(base_args)
+        self.logger.info(optim_args)
         self.base_model = get_language_model(base_model_type)(**base_args)
         self.optim_model = get_language_model(optim_model_type)(**optim_args) 
         
