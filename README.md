@@ -2,7 +2,15 @@
 <img src="./images/Header.png" alt="Expert-level Prompting" title="Expert-level Prompting"/>
 </p>
 
+## News
+- May 17, 2024: Modify arguments control, use yaml file to set arguments for PromptAgent.
+- May  15, 2024: Different models (openai, palm, huggingface models) are supported by PromptAgent.
+- Jan. 16, 2024: PromptAgent has been accepted by ICLR 2024!  
+- Dec. 17, 2023: Refined the code for ease of reading and use by users.
 # PromptAgent
+
+
+
 This is the official repo for "PromptAgent: Strategic Planning with Language Models Enables Expert-level Prompt Optimization".   PromptAgent is a novel automatic prompt optimization method that autonomously crafts prompts equivalent in quality to those handcrafted by experts, i.e., expert-level prompts. [[arXiv](https://arxiv.org/abs/2310.16427)]
 <p align="center">
 <img src="./images/expert_prompt_00.jpg" alt="Expert-level Prompting" width="700" title="Expert-level Prompting"/>
@@ -11,12 +19,6 @@ Unlike discovering magic/local prompt variants as existing prompt optimization m
 <p align="center">
 <img src="./images/mcts_00.jpg" alt="Expert-level Prompting" width="700" title="Expert-level Prompting"/>
 </p>
-
-## News
-- May 17, 2024: Modify arguments control, use yaml file to set arguments for PromptAgent.
-- May  15, 2024: Different models (openai, palm, huggingface models) are supported by PromptAgent.
-- Jan. 16, 2024: PromptAgent has been accepted by ICLR 2024!  
-- Dec. 17, 2023: Refined the code for ease of reading and use by users.
 
 ## Installation
 
