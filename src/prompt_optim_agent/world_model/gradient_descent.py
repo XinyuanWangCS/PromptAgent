@@ -43,6 +43,11 @@ class GradientDescent():
         batch_size = len(batch['question'])
         batch_prompts =self._build_forward_prompts_func(batch['question'], cur_prompt)
         responses = self._batch_forward_func(batch_prompts)
+        
+        for p, r in zip(batch_prompts, responses):
+            self.logger.info(f"Input:\n{p}")
+            self.logger.info(f"Output:\n{r}")
+            
         preds = self.task.batch_clean_responses(responses)
         
         labels = self.task.clean_labels(batch['answer'])
@@ -201,7 +206,7 @@ class GradientDescent():
         
         gradient = self.cal_gradient(
             cur_prompt=cur_prompt, 
-            error_string=error_string,
+            example_string=error_string,
             gradient_prompt_tempelate=self.gradient_prompt_tempelate)
         
         trajectory_prompts = helper_data['trajectory_prompts']

@@ -1,3 +1,4 @@
 **/__pycache__/
 logs/
 api_keys.txt
+config.yaml

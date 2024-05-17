@@ -291,10 +291,8 @@ class MCTS(SearchAlgo, Generic[State, Action]):
                     
         return path, cum_rewards
 
-    def search(self, init_state: str, iteration_num: int =None):
-        if iteration_num is not None:
-            self.iteration_num = iteration_num
-        
+    def search(self, init_state: str):
+
         self.root = self.world_model.build_root(init_state)
         self.root.reward = self.root.cal_reward()
         self.nodes.append(self.root)
@@ -316,13 +314,12 @@ class MCTS(SearchAlgo, Generic[State, Action]):
         return self.trace_in_each_iter, mcts_output
 
     def __call__(self,
-                 init_prompt: str,
-                 iteration_num: int = None,
+                 init_state: str,
                  **kwargs):
         
         MCTSNode.reset_id()
 
-        iteration_paths, mcts_outputs = self.search(init_prompt, iteration_num)
+        iteration_paths, mcts_outputs = self.search(init_state)
         
         return iteration_paths, mcts_outputs
 

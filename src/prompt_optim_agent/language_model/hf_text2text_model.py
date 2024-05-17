@@ -21,8 +21,6 @@ class HFText2TextModel():
         self.model = AutoModelForSeq2SeqLM.from_pretrained(
             model_name,
             trust_remote_code=True).to(device)
-        
-        self.generate = self.batch_forward_func
     
     def batch_forward_func(self, batch_prompts):
         inputs = self.tokenizer(batch_prompts, return_tensors="pt").to(self.device)
@@ -32,6 +30,15 @@ class HFText2TextModel():
             temperature=self.temperature)
         responses = self.tokenizer.batch_decode(model_output, skip_special_tokens=True)
         return responses
+    
+    def generate(self, input):
+        inputs = self.tokenizer([input], return_tensors="pt").to(self.device)
+        model_output = self.model.generate(
+            **inputs, 
+            do_sample=self.do_sample, 
+            temperature=self.temperature)
+        responses = self.tokenizer.batch_decode(model_output, skip_special_tokens=True)
+        return responses[0]
 
 
         

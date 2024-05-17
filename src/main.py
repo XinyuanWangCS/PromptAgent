@@ -1,68 +1,75 @@
 import argparse
 from prompt_optim_agent import *
+import yaml
 
-def str2bool(v):
-    if isinstance(v, bool):
-       return v
-    if v.lower() in ('yes', 'true', 't', 'y', '1'):
-        return True
-    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
-        return False
-    else:
-        raise argparse.ArgumentTypeError('Boolean value expected.')
+def load_config(config_path):
+    with open(config_path, 'r') as f:
+        config = yaml.safe_load(f)
+    return config
 
 def config():
     parser = argparse.ArgumentParser(description='Process prompt search agent arguments')
-    parser.add_argument('--task_name', type=str, default='bigbench',  help='This is consistent to the task file names in tasks folder. The default is bigbench task.')  
-    parser.add_argument('--search_algo', type=str, default='mcts', choices=['mcts', 'beam'], help='Prompt search algorithm. Choose from \'mcts\' and \'beam\'.')    
-    parser.add_argument('--batch_size', type=int, default=5, help='Batch size depending on the memory and model size')
-    parser.add_argument('--depth_limit', type=int, default=5, help="The max depth of a single searching path.")
-    parser.add_argument('--train_size', type=int, default=None, help="The dataset that sample batches from.")
-    parser.add_argument('--eval_size', type=int, default=50, help="Calculate reward on this set.")
-    parser.add_argument('--test_size', type=int, default=0, help="Test set size.")
-    parser.add_argument('--seed', type=int, default=42, help="The seed to shuffle the dataset.")
-    parser.add_argument('--train_shuffle', type=str2bool, default=True, help='Shuffle training set')
-    
-    #Search
-    parser.add_argument('--init_prompt', type=str, default="Let's solve the problem.", help='Initial prompt written by human.')
-    parser.add_argument('--iteration_num', type=int, default=12, help='MCTS iteration number.')
-    parser.add_argument('--expand_width', type=int, default=3, help="The number of batches sampled in each expansion.")
-    parser.add_argument('--num_new_prompts', type=int, default=1, help="The number of new prompts sampled in each batch.")
-    parser.add_argument('--post_instruction', type=str2bool, default=False, help="True: the position of instruction is question+instruction; \nFalse: the position of instruction is instruction+question")
-    
-    # MCTS
-    parser.add_argument('--min_depth', type=int, default=2, help="Early stop depth: early stop is only applied when depth is larger than min_depth.")
-    parser.add_argument('--w_exp', type=float, default=2.5, help="Weight of MCTS.")
 
-    # World Model
-    parser.add_argument('--base_model_type', type=str, default='openai', choices=['openai', "palm", "hf_text2text", "hf_textgeneration", "ct_model"], help='The base model type, choosing from [openai, palm, hf_text2text, hf_textgeneration, ct_model].')
-    parser.add_argument('--optim_model_type', type=str, default='openai', choices=['openai', "palm", "hf_text2text", "hf_textgeneration", "ct_model"], help='The optimiszr model type, choosing from [openai, palm, hf_text2text, hf_textgeneration, ct_model].') 
-    parser.add_argument('--base_model_name', type=str, default='gpt-3.5-turbo', help='The base model that makes predictions.')
-    parser.add_argument('--optim_model_name', type=str, default='gpt-4', help='Prompt optimizer.') 
-    parser.add_argument('--base_temperature', type=float, default=0.0)
-    parser.add_argument('--optim_temperature', type=float, default=1.0)
-    parser.add_argument('--base_api_key', type=str, default=None, help='OpenAI api key or PaLM 2 api key')
-    parser.add_argument('--optim_api_key', type=str, default=None, help='OpenAI api key or PaLM 2 api key')
-    parser.add_argument('--device', type=str, default="cuda")
-    parser.add_argument('--base_model_path', type=str, default=None)
-    parser.add_argument('--optim_model_path', type=str, default=None)
-    
-    # Others
-    parser.add_argument('--log_dir', type=str, default='./logs/', help='Log directory.')
-    parser.add_argument('--data_dir', type=str, default=None, help='Path to the data file (if needed)')
-    parser.add_argument('--print_log', type=str2bool, default=True, help='Print the internal steps of MCTS')
-
+    parser.add_argument('--config_dir', type=str, default='./defualt_config.yaml')
+   
     args = parser.parse_args()
 
-    args = vars(args)
+    args = load_config(args.config_dir)
     return args
 
+def validate_config(config):
+    # Basic settings
+    assert config['task_name'] is not None, "task_name must be specified"
+    assert config['search_algo'] in ['mcts', 'beam_search'], "search_algo must be 'mcts' or 'beam_search'"
+    assert isinstance(config['print_log'], bool), "print_log must be a boolean"
+    assert config['log_dir'] is not None, "log_dir must be specified"
+    assert config['init_prompt'] is not None, "init_prompt must be specified"
+
+    # Task setting
+    assert isinstance(config['task_setting']['train_size'], (int, type(None))), "train_size must be an integer or None"
+    assert isinstance(config['task_setting']['eval_size'], int), "eval_size must be an integer"
+    assert isinstance(config['task_setting']['test_size'], int), "test_size must be an integer"
+    assert isinstance(config['task_setting']['seed'], int), "seed must be an integer"
+    assert isinstance(config['task_setting']['post_instruction'], bool), "post_instruction must be a boolean"
+
+    # Base model setting
+    assert config['base_model_setting']['model_type'] in ['openai', 'palm', 'hf_text2text', 'hf_textgeneration', 'ct_model'], "base_model.model_type must be one of 'openai', 'palm', 'hf_text2text', 'hf_textgeneration', 'ct_model'"
+    assert config['base_model_setting']['model_name'] is not None, "base_model.model_name must be specified"
+    assert isinstance(config['base_model_setting']['temperature'], float), "base_model.temperature must be a float"
+    assert config['base_model_setting']['device'] in [None, 'cuda', 'cpu'] or config['base_model_setting']['device'].startswith('cuda:'), "base_model.device must be None, 'cuda', 'cpu', or 'cuda:x'"
+    if config['base_model_setting']['model_type'] in ['openai', 'palm'] and config['base_model_setting']['api_key'] is None:
+        raise ValueError("Please set base model's api key")
+
+    # Optim model setting
+    assert config['optim_model_setting']['model_type'] in ['openai', 'palm', 'hf_text2text', 'hf_textgeneration', 'ct_model'], "optim_model.model_type must be one of 'openai', 'palm', 'hf_text2text', 'hf_textgeneration', 'ct_model'"
+    assert config['optim_model_setting']['model_name'] is not None, "optim_model.model_name must be specified"
+    assert isinstance(config['optim_model_setting']['temperature'], float), "optim_model.temperature must be a float"
+    assert config['optim_model_setting']['device'] in [None, 'cuda', 'cpu'] or config['optim_model_setting']['device'].startswith('cuda:'), "optim_model.device must be None, 'cuda', 'cpu', or 'cuda:x'"
+    if config['optim_model_setting']['model_type'] in ['openai', 'palm'] and config['optim_model_setting']['api_key'] is None:
+        raise ValueError("Please set optim model's api key")
+
+    # Search config
+    assert isinstance(config['search_setting']['iteration_num'], int), "search.iteration_num must be an integer"
+    assert isinstance(config['search_setting']['expand_width'], int), "search.expand_width must be an integer"
+    assert isinstance(config['search_setting']['depth_limit'], int), "search.depth_limit must be an integer"
+    # MCTS setting
+    assert isinstance(config['search_setting']['min_depth'], int), "min_depth must be an integer"
+    assert isinstance(config['search_setting']['w_exp'], float), "w_exp must be a float"
+    # Beam search setting
+    assert isinstance(config['search_setting']['beam_width'], int), "beam_width must be an integer"
+
+    # World model setting
+    assert isinstance(config['world_model_setting']['train_shuffle'], bool), "world_model.train_shuffle must be a boolean"
+    assert isinstance(config['world_model_setting']['num_new_prompts'], int), "world_model.num_new_prompts must be an integer"
+    assert isinstance(config['world_model_setting']['train_batch_size'], int), "world_model.train_batch_size must be an integer"
 
 def main(args):
     agent = BaseAgent(**args)
-    agent.run(init_state=args['init_prompt'], iteration_num=args['iteration_num'])
+    agent.run()
     return
 
 if __name__ == '__main__':
     args = config()
+    validate_config(args)
+    print(args)
     main(args)

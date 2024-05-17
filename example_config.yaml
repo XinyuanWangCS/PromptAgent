@@ -1,0 +1,53 @@
+# basic settings
+task_name: bigbench # bigbench | ncbi | ... | or your own task
+search_algo: mcts # mcts | beam_search
+print_log: true
+log_dir: ./logs/
+
+# your initial prompt
+init_prompt: |
+  Answer questions about a table of penguins and their attributes.
+
+task_setting:
+  train_size: 70 
+  eval_size: 50 # data split for reward calculation
+  test_size: 79 # if test_size is not 0, the optimized nodes will be tested at last.
+  seed: 42 # if need to fixed shuffled dataset
+  data_dir: ./datasets/penguins_in_a_table.json # if data is downloaded
+  # Note: the current supported bigbench tasks are specified by 
+  # data_dir using the same task_name (bigbench), if there is not
+  # specific .py class inplemented in the tasks folder.
+  post_instruction: false # false: prompt + task question | true: task question + prompt
+
+base_model_setting:
+  model_type: openai # openai | palm | hf_text2text | hf_textgeneration | ct_model
+  model_name: gpt-3.5-turbo # api-based model'name or huggingface model name
+  temperature: 0.0
+  api_key: null # if need api key
+  device: null # cuda | cpu | cuda:x, e.g. 0,1,2...
+  model_path: null # ct model requires the downloaded model's path
+
+optim_model_setting:
+  model_type: openai # openai | palm | hf_text2text | hf_textgeneration | ct_model
+  model_name: gpt-4-turbo-preview # api-based model'name or huggingface model name
+  temperature: 1.0
+  api_key: null  # if need api key
+  device: null # cuda | cpu | cuda:x, e.g. 0,1,2...
+  model_path: null # ct model requires the downloaded model's path
+
+search_setting:
+  iteration_num: 10
+  expand_width: 3 # num of branches of each node
+  depth_limit: 5 # the max depth of mcts
+  # mcts setting
+  min_depth: 2 # min depth of mcts for early stop
+  w_exp: 2.5 # balance exploration and exploitation
+  # beam search setting
+  beam_width: 3
+
+world_model_setting:
+  # mcts world model setting
+  train_shuffle: true
+  num_new_prompts: 1 # 3 if beam search
+  train_batch_size: 5
+  

@@ -1,7 +1,7 @@
 import os
 import time
 from datetime import  timedelta
-from .utils import get_pacific_time, create_logger, parse_model_args
+from .utils import get_pacific_time, create_logger
 from tasks import get_task
 from .world_model import get_world_model
 from .search_algo import get_search_algo
@@ -12,28 +12,17 @@ class BaseAgent():
         self,
         task_name: str,
         search_algo: str,
-        
-        base_model_type:str,
-        optim_model_type:str,
-        
-        batch_size: int,
-        train_size: int,
-        eval_size: int, 
-        test_size: int,
-        seed:int, 
-        train_shuffle: bool,
-        post_instruction: bool,
-        log_dir: str,
-        data_dir: str,
-        
-        expand_width: int,
-        num_new_prompts: int,
-        min_depth:int,
-        depth_limit: int,
-        iteration_num: int, 
-        w_exp:float, 
         print_log: bool,
-        **kwargs) -> None:
+        log_dir: str,
+        
+        init_prompt: str,
+        
+        task_setting: dict,
+        base_model_setting: dict,
+        optim_model_setting: dict,
+        search_setting: dict,
+        world_model_setting: dict
+        ) -> None:
         """
         BaseAgent: set up task, logger, search algorithm, world model
         
@@ -65,49 +54,42 @@ class BaseAgent():
 
         """
         self.task_name = task_name
-        self.train_size = train_size
-        self.eval_size = eval_size
-        self.test_size = test_size
-        self.post_instruction = post_instruction
-        self.seed = seed
-
+        self.search_algo = search_algo
+        self. print_log = print_log
         self.log_dir = log_dir
-        self.data_dir = data_dir
+        self.init_prompt =init_prompt
         
-        self.task = get_task(task_name)(train_size=train_size, 
-                                        eval_size=eval_size,
-                                        test_size=test_size, 
-                                        seed=seed,
-                                        post_instruction=post_instruction,
-                                        data_dir = data_dir)
+        self.task_setting = task_setting
+        self.base_model_setting = base_model_setting
+        self.optim_model_setting = optim_model_setting
+        self.search_setting = search_setting
+        self.world_model_setting = world_model_setting
+        
+        self.task = get_task(task_name)(**task_setting)
 
-        if data_dir is not None and task_name == "bigbench":
-            task_name = task_name + "_" + data_dir.split('/')[-1].split('.')[-2]
+        if task_setting["data_dir"] is not None and task_name == "bigbench":
+            task_name = task_name + "_" + task_setting["data_dir"].split('/')[-1].split('.')[-2]
         
-        exp_name = f'{get_pacific_time().strftime("%Y%m%d_%H%M%S")}-{task_name}-algo_{search_algo}-batch_{batch_size}-train_{train_size}'
+        exp_name = f'{get_pacific_time().strftime("%Y%m%d_%H%M%S")}-{task_name}-algo_{search_algo}'
         
         self.log_dir = os.path.join(log_dir, exp_name)
         self.logger = create_logger(self.log_dir, f'{exp_name}', log_mode='train')
         self.logger.info(exp_name)
         self.log_vars()
-        self. print_log = print_log
         
-        self.logger.info("*****************")
-        self.logger.info(kwargs)
-        base_args, optim_args = parse_model_args(kwargs=kwargs)
-        self.logger.info(base_args)
-        self.logger.info(optim_args)
-        self.base_model = get_language_model(base_model_type)(**base_args)
-        self.optim_model = get_language_model(optim_model_type)(**optim_args) 
+        
+        self.base_model = get_language_model(
+            base_model_setting["model_type"])(**base_model_setting)
+        
+        self.optim_model = get_language_model(
+            optim_model_setting["model_type"])(**optim_model_setting) 
         
         self.world_model = get_world_model(search_algo)(
             task=self.task, 
             logger=self.logger, 
             base_model=self.base_model,
             optim_model=self.optim_model, 
-            num_new_prompts = num_new_prompts,
-            train_shuffle = train_shuffle,
-            train_batch_size = batch_size,
+            **world_model_setting
             )
         
         self.search_algo = get_search_algo(search_algo)(
@@ -115,26 +97,20 @@ class BaseAgent():
             world_model=self.world_model, 
             logger=self.logger,
             log_dir = self.log_dir,
-            min_depth=min_depth,
-            depth_limit=depth_limit,
-            expand_width=expand_width,
-            iteration_num = iteration_num,
-            w_exp=w_exp,
+            **self.search_setting
             )
     
-    
-    
-    def run(self, init_state, iteration_num):
+    def run(self):
         """
         Start searching from initial prompt
         """
-        self.logger.info(f'init_prompt: {init_state}')
+        self.logger.info(f'init_prompt: {self.init_prompt}')
         start_time = time.time()
         
-        states, result_dict = self.search_algo.search(init_state=init_state, iteration_num=iteration_num)
+        states, result_dict = self.search_algo.search(init_state=self.init_prompt)
         end_time = time.time()
         exe_time = str(timedelta(seconds=end_time-start_time)).split('.')[0]
-        self.logger.info(f'\nDone! Iteration: {iteration_num} Excution time: {exe_time}')
+        self.logger.info(f'\nDone!Excution time: {exe_time}')
         return states, result_dict
     
     def log_vars(self):

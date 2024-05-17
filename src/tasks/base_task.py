@@ -158,6 +158,8 @@ class BaseTask():
 
         if train_size is not None:
             train_set = dataset[:train_size]
+        else:
+            train_set = dataset
         eval_set = dataset[-eval_size:]
         
         return train_set, eval_set, test_set

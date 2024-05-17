@@ -2,7 +2,7 @@
 <img src="./images/Header.png" alt="Expert-level Prompting" title="Expert-level Prompting"/>
 </p>
 
-# PromptAgent 2.0
+# PromptAgent
 This is the official repo for "PromptAgent: Strategic Planning with Language Models Enables Expert-level Prompt Optimization".   PromptAgent is a novel automatic prompt optimization method that autonomously crafts prompts equivalent in quality to those handcrafted by experts, i.e., expert-level prompts. [[arXiv](https://arxiv.org/abs/2310.16427)]
 <p align="center">
 <img src="./images/expert_prompt_00.jpg" alt="Expert-level Prompting" width="700" title="Expert-level Prompting"/>
@@ -13,6 +13,7 @@ Unlike discovering magic/local prompt variants as existing prompt optimization m
 </p>
 
 ## News
+- May 17, 2024: Modify arguments control, use yaml file to set arguments for PromptAgent.
 - May  15, 2024: Different models (openai, palm, huggingface models) are supported by PromptAgent.
 - Jan. 16, 2024: PromptAgent has been accepted by ICLR 2024!  
 - Dec. 17, 2023: Refined the code for ease of reading and use by users.
@@ -31,8 +32,10 @@ pip install -r requirements.txt
 ## Quick Start
 
 The following command run PromptAgent to craft an expert prompt for a BIG-bench task, [penguins_in_a_table](https://github.com/google/BIG-bench/tree/main/bigbench/benchmark_tasks/penguins_in_a_table). The running could take some time depending on the inference speed of OpenAI APIs and size of datasets. 
+
+**Note**: Before running this command, please add your (OpenAI) api key to the example_config.yaml file (base_model_setting: api_key and optim_model_setting: api_key). You can also check all the other auguments in the yaml file.
 ```bash
-python src/main.py --task_name bigbench --search_algo mcts --batch_size 5 --depth_limit 5 --train_size 70 --eval_size 50 --test_size 0 --seed 42 --train_shuffle True --iteration_num 10 --expand_width 3 --post_instruction False --base_model_type openai --base_model_name gpt-3.5-turbo --optim_model_type openai --optim_model_name gpt-4-turbo-preview --log_dir logs/ --data_dir datasets/penguins_in_a_table.json --init_prompt "Answer questions about a table of penguins and their attributes." --base_api_key "your_api_key" 
+python src/main.py --config_dir example_config.yaml 
 ```
 
 `penguins_in_a_table` is an table understanding task to answer questions about animals contained in tables. An example from the original dataset looks like this:
@@ -87,20 +90,36 @@ python src/test.py --task_name bigbench --prompt_file "prompt file path" --train
 
 
 ## Huggingface TextGeneration Model
+If you are using Huggingface TextGeneration model, please modify the base_model_setting or optim_model_setting in the .yaml file. If you plan to use open-source models, we recommand using instruction-tuned models with a moderate size, such as mistralai/Mistral-7B-Instruct-v0.2. As we mentioned in the paper, expert-level prompt are prepared for relatively advanced LLMs.
+
+**Note**: You may modify the parameters of the huggingface model (such as max_new_tokens), since these models may have different input windows or other settings.
+
+Here is an example of using mistralai/Mistral-7B-Instruct-v0.2:
 ```bash
-python src/main.py --task_name bigbench --search_algo mcts --batch_size 5 --depth_limit 5 --train_size 70 --eval_size 50 --test_size 0 --seed 42 --train_shuffle True --iteration_num 10 --expand_width 3 --post_instruction False --base_model_type hf_textgeneration --base_model_name "TinyLlama/TinyLlama-1.1B-Chat-v1.0" --optim_model_type openai --optim_model_name gpt-4-1106-preview --log_dir logs/ --data_dir datasets/penguins_in_a_table.json --init_prompt "Answer questions about a table of penguins and their attributes." --optim_api_key "your api key"
-```
-## CTranslate model
-### Train
-```bash
-python src/main.py --task_name bigbench --search_algo mcts --batch_size 5 --depth_limit 5 --train_size 70 --eval_size 50 --test_size 0 --seed 42 --train_shuffle True --iteration_num 10 --expand_width 3 --post_instruction False --base_model_type ct_model --base_model_name 'mistralai/Mistral-7B-Instruct-v0.2' --base_model_path "/home/xinyuan/workspace/download_models/Mistral-7B-Instruct-v0.2_int8_float16" --optim_model_type openai --optim_model_name gpt-4-1106-preview --log_dir logs/ --data_dir datasets/penguins_in_a_table.json --init_prompt "Answer questions about a table of penguins and their attributes." --optim_api_key "your_openai_api_key"
-```
-### Test
-```bash
-python src/test.py --task_name bigbench --prompt_file "/home/xinyuan/workspace/PromptAgent/logs/20240201_004802-bigbench_penguins_in_a_table-algo_mcts-batch_5-train_70_mistral_int8_float16/base_prompt.txt" --train_size 70 --eval_size 50 --test_size 79 --seed 42 --base_model_type "ct_model" --base_model_name 'mistralai/Mistral-7B-Instruct-v0.2' --data_dir "datasets/penguins_in_a_table.json" --base_model_path "/home/xinyuan/workspace/download_models/Mistral-7B-Instruct-v0.2_int8_float16"
+base_model_setting:
+  model_type: hf_textgeneration # openai | palm | hf_text2text | hf_textgeneration | ct_model
+  model_name: mistralai/Mistral-7B-Instruct-v0.2 # api-based model'name or huggingface model name
+  temperature: 0.0
+  api_key: null # if need api key
+  device: cuda # cuda | cpu | cuda:x, e.g. 0,1,2...
+  model_path: null # ct model requires the downloaded model's path
 ```
 
-
+## How to add new models?
+You can add a new .py file including your new model. The model's class requires two functions:
+batch_forward_func: input a batch of prompts, output a batch of model's responses.
+```bash
+def batch_forward_func(self, batch_prompts: List(str)):
+  ...
+  return List(str)
+```
+generate: input one prompt, output one response
+```bash
+def generate(self, input: str):
+  ...
+  return str
+```
+You can also contact us, if you meet any issue or would like to add to the official PromptAgent repo.
 ## How to add a new task?
 Our current tasks includes selection question tasks and NER tasks. Adding new selection tasks is relatively easy. Please refer to the .py files in the tasks folder. First, create a new task.py file and a new CustomTask class. Then, there are several task-specific functions to be implemented in your customized task.py file: 
 1. Load your dataset: We recommend spliting your dataset into "train" and "test" and storing them into json file.
