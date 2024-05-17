@@ -121,6 +121,7 @@ def generate(self, input: str):
   ...
   return str
 ```
+Then you may add the model_type name and the class name in the __init__.py in the language_model folder.
 You can also contact us, if you meet any issue or would like to add to the official PromptAgent repo.
 ## How to add a new task?
 Our current tasks includes selection question tasks and NER tasks. Adding new selection tasks is relatively easy. Please refer to the .py files in the tasks folder. First, create a new task.py file and a new CustomTask class. Then, there are several task-specific functions to be implemented in your customized task.py file: 
