@@ -25,13 +25,42 @@ class BaseTask():
                  test_size=None, 
                  
                  task_name = 'base_task',
-                 data_dir=None,  #json file
+                 data_dir=None, 
                  seed=None,  
-                 post_instruction=True, 
+                 post_instruction=False, 
                  TaskDataset=BaseDataset,
                  option_num=5, 
                  **kwargs):
         
+        """
+            Base class for each tasks.
+            
+            args:
+                option_num: max number of options in the task
+                post_instruction: True: answer + prompt | False: prompt + answer
+                data_dir: dir of task data's json file
+                
+            The BaseTask is designed for direct asnwer matching tasks, 
+            single choice selection tasks, multi-choice selection tasks.
+            
+            If requiring new tasks form, or different selection tasks,
+            several parts need to be implemented:
+            
+                function: cal_correct
+                function: cal_metric
+                function: clean_labels
+                function: clean_response
+                property: self.answer_format_prompt
+                property: option_num
+                function: build_forward_prompts_completion (optional)
+                
+            These two need to be implemented if your data is not organised
+            as the requirement of load_task_dataset
+                function: transform_format (optional)
+                function: load_task_dataset (optional)
+                
+                
+        """
         self.task_name = task_name    
         self.data_dir = data_dir
         self.seed = seed
@@ -56,8 +85,14 @@ class BaseTask():
         print(f'train_size set: {len(self.train_size)}')
         print(f'eval_size set: {len(self.eval_size)}')
         print(f'test_size set: {len(self.test_size)}')
+        
         self.answer_format_prompt = "At the end show the answer option bracketed between <answer> and </answer>."
-    
+        """
+            answer_format_prompt: 
+                It is appended after the task question to help the model extract the prediction.
+                It should match your prediction extraction method in function "clean_response".
+        """
+        
     def load_task_dataset(self, data_dir):
         """
         <Task Specific>
@@ -88,10 +123,115 @@ class BaseTask():
     def transform_format(self, dataset):
         """
         <task specific>
-        This function is to transform the dataset's format that fits the pred_model (e.g. question + options). 
+        This function is to transform the dataset question's format for 
+        a better input form for the base_model.
+        For example, for each data point:
+        "question": Who is better? 
+        transform_format 
+        -> Who is better? Options: A. Allen B.Jack
+        
         It can be re-implemented in the task.py files.
+        
+        Do nothing if your "question" in the dataset can be directly fed to 
+        the base_model to make predictions.
         """
         return dataset
+    
+    def cal_correct(self, preds, labels, data_type = "str"):
+        '''
+        <task specific>
+        The function of comparing the predictions and labels.
+        
+        data_type: str | set
+            str: preds, labels are List(str)
+            set: preds, labels are List(set)
+            
+        Every time a batch data is sampled and predicted, by comparing with
+        the labels, PromptAgent collect the errors.
+        Function called at: prompt_optim_agent/world_model/gradient_descent.py line 54
+        
+        '''
+        if data_type == "set":
+            comparisons = []
+            for p, l in zip(preds, labels):
+                if p == l:
+                    comparisons.append(1)
+                else:
+                    comparisons.append(0)
+                return comparisons
+        else:
+            return list(np.array((np.array(preds) == np.array(labels))).astype(int))
+    
+    def cal_metric(self, preds, labels, questions=None):
+        '''
+        <task specific>
+        Calculate the evaluation metric, e.g. Accuracy, F1 score.
+        "question" is for NCBI calculating F1 score.
+        return a number / tuple of metrics
+        
+        This function is for calculating the reward of MCTS.
+        '''
+        correct = self.cal_correct(preds=preds, labels=labels)
+        return np.mean(correct)
+    
+
+    def clean_labels(self, labels):
+        '''
+        <task specific>
+        Transfer the form of the task ground-truth answers to List(set) 
+        or List(str) that fit the input requirement of function "cal_correct"
+        
+        Do nothing if the data is alreadly loaded that way.
+        '''
+        return labels
+    
+    def clean_response(self, response):
+        '''
+        <task specific>
+        Extract the prediction from base_model's response,
+        so that the output form batch_clean_responses fit
+        the input requirement of function "cal_correct"
+        '''
+        letters = string.ascii_uppercase[:self.option_num] + string.ascii_lowercase[:self.option_num]
+        clean_pattern = r"<answer>([\s\S]*?)<\/answer>"
+        match = re.findall(clean_pattern, response.lower())
+        if len(match) == 0:
+            return 'N/A: Format error'
+
+        answer = re.search(r"\([" + letters + r"]\)", match[-1])
+        if answer is not None:
+            return answer.group(0)[1].upper()
+        answer = re.search(r"[" + letters + r"]", match[-1])
+        if answer is None:
+            return 'N/A: Format error'
+        return answer[0].upper()
+    
+    def batch_clean_responses(self, responses):
+        """
+            Extract preds from responses.
+        """
+        if not isinstance(responses, list):
+            responses = list(responses)
+        batch_answers = []
+        for response in responses:
+            batch_answers.append(self.clean_response(response))
+        return batch_answers
+    
+    def build_forward_prompts_completion(self, questions, cur_propmt):
+        '''
+        Optional: <task specific>
+        The format of combining question and prompts.
+        '''
+        prompts = []
+        if self.post_instruction:
+            for question in questions:
+                prompts.append(f'{question}\n{cur_propmt}')
+        else:
+            for question in questions:
+                prompts.append(f'{cur_propmt}\n{question}\n{self.answer_format_prompt}')#
+        
+        return prompts
+    
     
     def get_split_task_dataset(self, origin_dataset, train_size=None, eval_size=150, test_size=0, seed=None, base_shuffle=True):
         """
@@ -188,71 +328,6 @@ class BaseTask():
     
     def get_dataset_size(self, split='test'):
         return len(self.dataset[split])
-
-    def build_forward_prompts_completion(self, questions, cur_propmt):
-        '''
-        <task specific>
-        The format of combining question and prompts.
-        '''
-        prompts = []
-        if self.post_instruction:
-            for question in questions:
-                prompts.append(f'{question}\n{cur_propmt}')
-        else:
-            for question in questions:
-                prompts.append(f'{cur_propmt}\n{question}\n{self.answer_format_prompt}')#
-        
-        return prompts
-
-    def clean_labels(self, labels):
-        '''
-        <task specific>
-        Some tasks' labels are extracted from the answer.
-        '''
-        return labels
-    
-    def clean_response(self, response):
-        '''
-        <task specific>
-        Extract the answers from pred_model's response.
-        '''
-        letters = string.ascii_uppercase[:self.option_num] + string.ascii_lowercase[:self.option_num]
-        clean_pattern = r"<answer>([\s\S]*?)<\/answer>"
-        match = re.findall(clean_pattern, response.lower())
-        if len(match) == 0:
-            return 'N/A: Format error'
-
-        answer = re.search(r"\([" + letters + r"]\)", match[-1])
-        if answer is not None:
-            return answer.group(0)[1].upper()
-        answer = re.search(r"[" + letters + r"]", match[-1])
-        if answer is None:
-            return 'N/A: Format error'
-        return answer[0].upper()
-    
-    def batch_clean_responses(self, responses):
-        if not isinstance(responses, list):
-            responses = list(responses)
-        batch_answers = []
-        for response in responses:
-            batch_answers.append(self.clean_response(response))
-        return batch_answers
-    
-    def cal_correct(self, preds, labels):
-        '''
-        <task specific>
-        The function of comparing the predictions and labels.
-        '''
-        return list(np.array((np.array(preds) == np.array(labels))).astype(int))
-    
-    def cal_metric(self, preds, labels, questions=None):
-        '''
-        <task specific>
-        Calculate the evaluation metric, e.g. Accuracy, F1 score.
-        return a number / tuple of metrics
-        '''
-        correct = self.cal_correct(preds=preds, labels=labels)
-        return np.mean(correct)
     
     def process_gradient_descent_output(self, gradient_descent_output):
         return gradient_descent_output

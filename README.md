@@ -124,12 +124,14 @@ def generate(self, input: str):
 Then you may add the model_type name and the class name in the __init__.py in the language_model folder.
 You can also contact us, if you meet any issue or would like to add to the official PromptAgent repo.
 ## How to add a new task?
-Our current tasks includes selection question tasks and NER tasks. Adding new selection tasks is relatively easy. Please refer to the .py files in the tasks folder. First, create a new task.py file and a new CustomTask class. Then, there are several task-specific functions to be implemented in your customized task.py file: 
-1. Load your dataset: We recommend spliting your dataset into "train" and "test" and storing them into json file.
-2. Input formating: For selection questions, it is necessary to combine question and options before inputing into the pred_model.
-3. Answer extraction: Extract the final answer from the model's response.   
+Our base task class can be seen in the tasks/base_task.py file, where the tasks specific functions are explained in detail. Our current tasks includes selection question tasks and NER tasks. Adding new selection tasks is relatively easy. Please refer to the .py files in the tasks folder. First, create a new task.py file and a new CustomTask class. Then, there are several task-specific functions to be implemented in your customized task.py file: 
+1. Load your dataset: We recommend spliting your dataset into "train" and "test" and storing them into json file. Related functions: load_task_dataset, transform_format
+2. Input formating: For selection questions, it is necessary to combine question and options before inputing into the pred_model. Related functions: clean_labels, build_forward_prompts_completion
+3. Answer extraction: Extract the final answer from the model's response. Related functions: clean_response  
+4. Design correction metric: For each task, we need a define "correctness" for two reasons. In PromptAgent, we need to sample one batch and find the errors of base models, so cal_correct is needed for comparing the predictions and labels. Also. we need a reward for MCTS (cal_metric), which is the validation set accuracy for most of the tasks.
 
 After that, you can run PromptAgent on your customized dataset!
+
 
 ## TODO
 - We will extend the features to enable flexible training/testing pipeline with new tasks.  
