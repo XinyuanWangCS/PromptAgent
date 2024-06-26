@@ -3,6 +3,7 @@
 </p>
 
 ## News
+- Jun. 27, 2024: LLM Reasoners library now integrates PromptAgent! See the adapted PromptAgent here: [Link](https://github.com/maitrix-org/llm-reasoners/tree/main/examples/PromptAgent/MedQA)
 - May 17, 2024: Modify arguments control, use yaml file to set arguments for PromptAgent.
 - May  15, 2024: Different models (openai, palm, huggingface models) are supported by PromptAgent.
 - Jan. 16, 2024: PromptAgent has been accepted by ICLR 2024!  
