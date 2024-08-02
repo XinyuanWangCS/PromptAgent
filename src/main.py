@@ -33,7 +33,7 @@ def validate_config(config):
     assert isinstance(config['task_setting']['post_instruction'], bool), "post_instruction must be a boolean"
 
     # Base model setting
-    assert config['base_model_setting']['model_type'] in ['openai', 'palm', 'hf_text2text', 'hf_textgeneration', 'ct_model'], "base_model.model_type must be one of 'openai', 'palm', 'hf_text2text', 'hf_textgeneration', 'ct_model'"
+    assert config['base_model_setting']['model_type'] in ['openai', 'palm', 'hf_text2text', 'hf_textgeneration', 'ct_model', 'vllm'], "base_model.model_type must be one of 'openai', 'palm', 'hf_text2text', 'hf_textgeneration', 'ct_model'"
     assert config['base_model_setting']['model_name'] is not None, "base_model.model_name must be specified"
     assert isinstance(config['base_model_setting']['temperature'], float), "base_model.temperature must be a float"
     assert config['base_model_setting']['device'] in [None, 'cuda', 'cpu'] or config['base_model_setting']['device'].startswith('cuda:'), "base_model.device must be None, 'cuda', 'cpu', or 'cuda:x'"

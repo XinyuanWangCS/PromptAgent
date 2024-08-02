@@ -12,3 +12,4 @@ google
 google-api-python-client
 google-generativeai
 ctranslate2
+vllm
