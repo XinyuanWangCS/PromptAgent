@@ -4,6 +4,7 @@ from .palm_model import PaLMModel
 from .hf_text2text_model import HFText2TextModel 
 from .hf_textgeneration_model import HFTextGenerationModel
 from .ct_model import CTranslateModel
+from .vllm import VllmModel
 
 LANGUAGE_MODELS = {
     "openai": OpenAIModel,
@@ -11,6 +12,7 @@ LANGUAGE_MODELS = {
     "hf_text2text": HFText2TextModel,
     "hf_textgeneration":HFTextGenerationModel,
     "ct_model": CTranslateModel,
+    "vllm": VllmModel
 }
 
 def get_language_model(language_model_name):
