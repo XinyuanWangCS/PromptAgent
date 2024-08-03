@@ -21,7 +21,7 @@ task_setting:
 
 base_model_setting:
   model_type: openai # openai | palm | hf_text2text | hf_textgeneration | ct_model
-  model_name: gpt-3.5-turbo # api-based model'name or huggingface model name
+  model_name: gpt-4o-mini # api-based model'name or huggingface model name
   temperature: 0.0
   api_key: null # if need api key
   device: null # cuda | cpu | cuda:x, e.g. 0,1,2...
@@ -30,7 +30,7 @@ base_model_setting:
 
 optim_model_setting:
   model_type: openai # openai | palm | hf_text2text | hf_textgeneration | ct_model
-  model_name: gpt-4-turbo-preview # api-based model'name or huggingface model name
+  model_name: gpt-4-turbo # api-based model'name or huggingface model name
   temperature: 1.0
   api_key: null  # if need api key
   device: null # cuda | cpu | cuda:x, e.g. 0,1,2...

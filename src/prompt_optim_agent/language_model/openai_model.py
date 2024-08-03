@@ -1,7 +1,6 @@
 from openai import OpenAI
 import time
 
-CHAT_COMPLETION_MODELS = ["gpt-4o", "gpt-4-turbo-preview", 'gpt-3.5-turbo',  'gpt-4', "gpt-4-32k", "gpt-3.5-turbo-16k"]
 
 class OpenAIModel():
     def __init__(
@@ -22,11 +21,9 @@ class OpenAIModel():
         self.model_name = model_name
         self.temperature = temperature
         
-        if model_name in CHAT_COMPLETION_MODELS: 
-            self.batch_forward_func = self.batch_forward_chatcompletion
-            self.generate = self.gpt_chat_completion
-        else:
-            raise ValueError(f"Model {model_name} not supported.")
+        self.batch_forward_func = self.batch_forward_chatcompletion
+        self.generate = self.gpt_chat_completion
+
         
     
     def batch_forward_chatcompletion(self, batch_prompts):

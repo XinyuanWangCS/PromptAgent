@@ -1,8 +1,6 @@
 import google.generativeai as palm
 import time
 
-PALM_MODELS = ['models/chat-bison-001']
-
 class PaLMModel():
     def __init__(
         self,
@@ -15,10 +13,7 @@ class PaLMModel():
         self.temperature = temperature
         self._api_key_config(api_key)
         
-        if model_name in PALM_MODELS:
-            self.batch_forward_func = self.batch_forward_chatcompletion_palm
-        else:
-            raise ValueError(f"Model {model_name} not supported.")
+        self.batch_forward_func = self.batch_forward_chatcompletion_palm
         
     def _api_key_config(self, api_key):
         # set up key from command
