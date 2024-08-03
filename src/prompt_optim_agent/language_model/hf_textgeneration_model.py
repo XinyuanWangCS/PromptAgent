@@ -6,7 +6,7 @@ class HFTextGenerationModel():
         self,
         model_name: str,
         temperature: float,
-        device: str = "cuda:1" if torch.cuda.is_available() else "cpu",
+        device: str = "cuda" if torch.cuda.is_available() else "cpu",
         **kwargs):
         
         self.model_name = model_name

@@ -25,6 +25,7 @@ base_model_setting:
   temperature: 0.0
   api_key: null # if need api key
   device: null # cuda | cpu | cuda:x, e.g. 0,1,2...
+  gpu_ids: null # [0,1,...] for vllm model
   model_path: null # ct model requires the downloaded model's path
 
 optim_model_setting:
@@ -33,6 +34,7 @@ optim_model_setting:
   temperature: 1.0
   api_key: null  # if need api key
   device: null # cuda | cpu | cuda:x, e.g. 0,1,2...
+  gpu_ids: null # [0,1,...] for vllm model
   model_path: null # ct model requires the downloaded model's path
 
 search_setting:
