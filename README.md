@@ -23,9 +23,7 @@ Unlike discovering magic/local prompt variants as existing prompt optimization m
 ```bash
 git clone https://github.com/XinyuanWangCS/PromptAgent.git
 cd PromptAgent
-conda create -n prompt_agent
-conda activate prompt_agent
-pip install -r requirements.txt
+uv sync
 ```
 
 
@@ -35,7 +33,7 @@ The following command run PromptAgent to craft an expert prompt for a BIG-bench 
 
 **Note**: Before running this command, please add your (OpenAI) api key to the example_config.yaml file (base_model_setting: api_key and optim_model_setting: api_key). You can also check all the other auguments in the yaml file.
 ```bash
-python src/main.py --config_dir example_config.yaml 
+uv run python src/main.py --config_dir example_config.yaml 
 ```
 
 `penguins_in_a_table` is an table understanding task to answer questions about animals contained in tables. An example from the original dataset looks like this:
@@ -74,18 +72,18 @@ that you correctly interpret these in context of the question.
 ...
 ```
 
-It takes around two hours to run the above experiment, which costs around $5 using OpenAI API (around $4 for GPT-4 and $1 for GPT-3.5). After finishing the optimization, all the intermediate nodes and paths will be stored in a json file. We will keep the top-k reward nodes, the last node in the highest average reward path, and the highest reward node in the highest average reward path. In the paper, we use the highest reward node in the highest average reward path as the selection strategy. 
+It takes around two hours to run the above experiment, which costs around `$5` using OpenAI API (around `$4` for GPT-4 and `$1` for GPT-3.5). After finishing the optimization, all the intermediate nodes and paths will be stored in a json file. We will keep the top-k reward nodes, the last node in the highest average reward path, and the highest reward node in the highest average reward path. In the paper, we use the highest reward node in the highest average reward path as the selection strategy. 
 
 ### Test
 We can run `test.py` to test any prompt performance with the following commands:  
 Enter the prompt in the command line:
 ```bash
-python src/test.py --task_name bigbench --prompt "Answer questions about a table of penguins and their attributes." --prompt_file "prompt file path" --train_size 70 --eval_size 50 --test_size 79 --seed 42 --base_model_type "openai" --base_model_name 'gpt-3.5-turbo' --data_dir "datasets/penguins_in_a_table.json" --base_api_key "your_api"
+uv run python src/test.py --task_name bigbench --prompt "Answer questions about a table of penguins and their attributes." --train_size 70 --eval_size 50 --test_size 79 --seed 42 --base_model_type "openai" --base_model_name 'gpt-3.5-turbo' --data_dir "datasets/penguins_in_a_table.json" --base_api_key "your_api"
 ```
 or   
 Put prompt in a .txt file if the prompt is very long:
 ```bash
-python src/test.py --task_name bigbench --prompt_file "prompt file path" --train_size 70 --eval_size 50 --test_size 79 --seed 42 --base_model_type "openai" --base_model_name 'gpt-3.5-turbo' --data_dir "datasets/penguins_in_a_table.json" --base_api_key "your_api"
+uv run python src/test.py --task_name bigbench --prompt_file "prompt file path" --train_size 70 --eval_size 50 --test_size 79 --seed 42 --base_model_type "openai" --base_model_name 'gpt-3.5-turbo' --data_dir "datasets/penguins_in_a_table.json" --base_api_key "your_api"
 ```
 
 
