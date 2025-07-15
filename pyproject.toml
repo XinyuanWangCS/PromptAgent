@@ -1,0 +1,21 @@
+[project]
+name = "promptagent"
+version = "0.1.0"
+description = "This is the official repo for 'PromptAgent: Strategic Planning with Language Models Enables Expert-level Prompt Optimization'. PromptAgent is a novel automatic prompt optimization method that autonomously crafts prompts equivalent in quality to those handcrafted by experts, i.e., expert-level prompts."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "ctranslate2>=4.6.0",
+    "datasets>=4.0.0",
+    "fire>=0.7.0",
+    "google>=3.0.0",
+    "google-api-python-client>=2.176.0",
+    "google-generativeai>=0.8.5",
+    "matplotlib>=3.10.3",
+    "numpy>=2.3.1",
+    "openai>=1.95.1",
+    "pytz>=2025.2",
+    "scipy>=1.16.0",
+    "tqdm>=4.67.1",
+    "transformers>=4.53.2",
+]
