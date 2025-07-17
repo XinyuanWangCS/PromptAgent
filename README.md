@@ -142,7 +142,7 @@ After that, you can run PromptAgent on your customized dataset!
 
 ## Citations
 
-If you find the paper and code useful, please kindly star this repo and cite the following paper. Feel free to contact <xiw136@ucsd.edu> and <zhenwang9102@gmail.com>, or open an issue if you have any questions. Thanks so much!
+If you find the paper and code useful, please kindly star this repo and cite the following paper. Feel free to contact <xywang626@gmail.com> and <zhenwang9102@gmail.com>, or open an issue if you have any questions. Thanks so much!
 
 ```bibtex
 @article{wang2023promptagent,
